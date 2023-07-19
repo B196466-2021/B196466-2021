@@ -1,0 +1,128 @@
+---
+title: "Annotation"
+output: html_document
+date: "2023-03-30"
+---
+
+```{r}
+#######################################
+##Garnett #############################
+#######################################
+#Mammary epithelium 乳腺上皮 Epithelial cell
+#CD227, K19，Cytokeratin-8，ESA, MUC
+#Mammary gland 乳腺 Cancer stem cell
+library(garnett)
+library(Seurat)
+library(org.Hs.eg.db)
+DefaultAssay(object = compare) <- "RNA"
+temp_raw_data <- GetAssayData(object = compare, slot = "counts")
+#temp_raw_data <- as.data.frame(temp_raw_data)
+#temp_raw_data <- as(as.matrix(temp_raw_data), "sparseMatrix")
+
+pd <- new("AnnotatedDataFrame", data = compare@meta.data)
+fData <- data.frame(gene_short_name = row.names(temp_raw_data), row.names = row.names(temp_raw_data))
+fd <- new("AnnotatedDataFrame", data = fData)
+lowerDetectionLimit <- 0
+
+if(all(temp_raw_data == floor(temp_raw_data))) {
+  expressionFamily <- negbinomial.size()
+} else if(any(data < 0)){
+  expressionFamily <- uninormal()
+} else {
+  expressionFamily <- tobit()
+}
+
+
+monocle_cds <- newCellDataSet(temp_raw_data,
+                              phenoData = pd, 
+                              featureData = fd,
+                              lowerDetectionLimit=lowerDetectionLimit,
+                              expressionFamily=expressionFamily)
+monocle_cds <- estimateSizeFactors(monocle_cds)
+
+#saveRDS(monocle_cds,"monocle_cds_mini_atlas23.Rdata")
+
+marker_file_path <- "/home/spdx/yutc/tiancy/scRNA/Raw_Data/breast_cancer_TME_markers_v4_XCell_revised.txt"
+marker_check <- check_markers(monocle_cds, 
+                              marker_file_path,
+                              db=org.Hs.eg.db,
+                              cds_gene_id_type = "SYMBOL",
+                              marker_file_gene_id_type = "SYMBOL",
+                              classifier_gene_id_type= "SYMBOL")
+plot_markers(marker_check)
+```
+
+```{r}
+set.seed(100)
+temp_classifier <- train_cell_classifier(cds = monocle_cds,
+                                         marker_file = marker_file_path,
+                                         db= org.Hs.eg.db,
+                                         cds_gene_id_type = "SYMBOL",
+                                         marker_file_gene_id_type = "SYMBOL",
+                                         classifier_gene_id_type = "SYMBOL",
+                                         num_unknown=5000,
+                                         max_training_samples=5000)
+```
+
+
+
+
+```{r}
+# 查看分类器最后选择的根节点基因，注意markerfile的基因都会在其中
+feature_genes_root <- get_feature_genes(temp_classifier, node = "root",  db = org.Hs.eg.db, convert_ids = TRUE)
+head(feature_genes_root)
+# 查看分类器中分支节点的分类基因
+feature_genes_branch <- get_feature_genes(temp_classifier, node = "Epithelial", db = org.Hs.eg.db, convert_ids = TRUE)
+head(feature_genes_branch)  
+```
+
+
+
+```{r}
+# classify cells with garnett
+monocle_cds <- classify_cells(monocle_cds,
+                              temp_classifier,
+                              db = org.Hs.eg.db,
+                              cluster_extend = TRUE,
+                              cds_gene_id_type = "SYMBOL")
+```
+
+```{r}
+# append to seurat object
+temp_garnett_metadata <- pData(monocle_cds)
+temp_garnett_metadata_sorted <- temp_garnett_metadata[rownames(compare@meta.data),,drop=FALSE]
+temp_garnett_metadata_sorted <- as.data.frame.matrix(temp_garnett_metadata_sorted)
+temp_garnett_metadata_sorted <- data.frame(row.names = row.names(temp_garnett_metadata_sorted),
+                                           garnett_cluster = temp_garnett_metadata_sorted$garnett_cluster,
+                                           garnett_call = temp_garnett_metadata_sorted$cell_type,
+                                           garnett_call_ext =temp_garnett_metadata_sorted$cluster_ext_type)
+compare<- AddMetaData(compare, metadata = temp_garnett_metadata_sorted)
+```
+
+```{r}
+DimPlot(compare, group.by = "garnett_call_ext", label = T, label.size = 3) +  ggtitle("Classified by Garnett")
+#cluster<-DimPlot(compare, group.by = "garnett_call_ext", label = T, label.size = 3) +  ggtitle("Classified by Garnett")
+#ggsave("cluster.png",cluster,width = 10, height = 10, dpi = 150)
+
+#saveRDS(compare, file="compare_annotation.Rds")
+#data <- readRDS("compare.Rds")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

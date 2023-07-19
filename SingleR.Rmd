@@ -1,0 +1,25 @@
+---
+title: "SingleR"
+output: html_document
+date: "2023-05-18"
+---
+
+```{r}
+###################################################
+# Cell type annotation using SingleR (immune cells)
+###################################################
+#CD14 high Mono classical Mono 
+#CD16 high Mono non- classical Mono 
+#monaco.ref <- celldex::MonacoImmuneData()
+#compare.sce <- as.SingleCellExperiment(compare)
+#monaco.main <- SingleR(test = compare.sce,assay.type.test = 1,ref = monaco.ref,labels = monaco.ref$label.main)
+#compare@meta.data$monaco.main <- monaco.main$pruned.labels
+#compare.annotation <- SetIdent(compare, value = "monaco.main")
+#DimPlot(compare.annotation, label = T , repel = T, label.size = 3)
+#ggsave("SingleR.png",SingleR)
+
+# 再细分，再区分批次 harmony  
+# pseudo bulk DEG 传统bulk DESeq (统计学更加正确)
+# 求和
+# RCAV2
+```
