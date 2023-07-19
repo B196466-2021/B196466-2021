@@ -1,0 +1,73 @@
+---
+title: "Monocle3_7"
+output: html_document
+date: "2023-04-03"
+---
+
+```{r}
+library(Seurat)
+library(monocle3)
+library(tidyverse)
+library(patchwork)
+##创建CDS对象并预处理数据
+data <- GetAssayData(compare, assay = 'RNA', slot = 'counts')
+cell_metadata <- compare@meta.data
+gene_annotation <- data.frame(gene_short_name = rownames(data))
+rownames(gene_annotation) <- rownames(data)
+cds <- new_cell_data_set(data,
+                         cell_metadata = cell_metadata,
+                         gene_metadata = gene_annotation)
+#preprocess_cds函数相当于seurat中NormalizeData+ScaleData+RunPCA
+cds <- preprocess_cds(cds, num_dim = 50)
+plot_pc_variance_explained(cds)
+#umap降维
+cds <- reduce_dimension(cds, preprocess_method = "PCA")#preprocess_method默认是PCA
+plot_cells(cds)
+colnames(colData(cds))
+p1 <- plot_cells(cds, reduction_method="UMAP", color_cells_by="seurat_clusters") + ggtitle('cds.umap')
+##从seurat导入整合过的umap坐标
+cds.embed <- cds@int_colData$reducedDims$UMAP
+int.embed <- Embeddings(compare, reduction = "umap")
+int.embed <- int.embed[rownames(cds.embed),]
+cds@int_colData$reducedDims$UMAP <- int.embed
+p2 <- plot_cells(cds, reduction_method="UMAP", color_cells_by="seurat_clusters") + ggtitle('int.umap')
+p = p1|p2
+ggsave("Reduction_Compare.png", plot = p, width = 10, height = 5)
+```
+
+
+```{r}
+#Cluster your cells
+cds <- cluster_cells(cds)
+plot_cells(cds, color_cells_by = "partition")
+```
+
+
+
+
+```{r}
+## 识别轨迹
+cds <- learn_graph(cds)
+p = plot_cells(cds, color_cells_by = "seurat_clusters", label_groups_by_cluster=FALSE,label_leaves=FALSE, label_branch_points=FALSE)
+ggsave("Trajectory.png", plot = p, width = 8, height = 6)
+```
+
+
+
+```{r}
+plot_cells(cds, color_cells_by = "seurat_clusters", label_groups_by_cluster=FALSE,label_leaves=TRUE,label_branch_points=TRUE,graph_label_size=1.5)
+```
+
+
+```{r}
+rownames(cds@principal_graph_aux[["UMAP"]]$dp_mst) <- NULL
+colnames(cds@int_colData@listData$reducedDims@listData$UMAP) <- NULL
+cds <- order_cells(cds)
+```
+
+
+```{r}
+p = plot_cells(cds, color_cells_by = "pseudotime", label_cell_groups = FALSE,label_leaves = FALSE,  label_branch_points = FALSE)
+ggsave("Trajectory_Pseudotime.png", plot = p, width = 8, height = 6)
+#saveRDS(cds, file = "cds.rds")
+```

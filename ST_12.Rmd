@@ -1,0 +1,229 @@
+---
+title: "ST"
+output: html_document
+date: "2023-04-13"
+---
+
+```{r}
+#/home/spdx/scRNA-seq/cellranger-7.1.0/bin/cellranger count #--id=5k_adult_mouse_brain_SC_RUN1 \
+                 #--transcriptome=/home/spdx/scRNA-seq/refdata-gex-mm10-2020-A \
+                 #--fastqs=/home/spdx/scRNA-seq/adult_mouse_brain_SC/5k_mouse_brain_CNIK_3pv3_fastqs
+library("Seurat")
+library("ggplot2")
+library("cowplot")
+library("dplyr")
+library("hdf5r")
+##读取矩阵文件
+name='Prostate Cancer'
+expr <- "/home/spdx/yutc/tiancy/scRNA/ST/Visium_FFPE_Human_Prostate_IF_filtered_feature_bc_matrix.h5"
+expr.mydata <- Seurat::Read10X_h5(filename =  expr )
+mydata <- Seurat::CreateSeuratObject(counts = expr.mydata, project = 'Prostate Cancer', assay = 'Spatial')
+mydata$slice <- 1
+mydata$region <- 'Prostate Cancer' #命名
+#读取镜像文件
+imgpath <- "/home/spdx/yutc/tiancy/scRNA/ST/Visium_FFPE_Human_Prostate_IF_spatial/spatial"
+img <- Seurat::Read10X_Image(image.dir = imgpath)
+Seurat::DefaultAssay(object = img) <- 'Spatial'
+img <- img[colnames(x = mydata)]
+mydata[['image']] <- img
+mydata  #查看数据
+```
+
+```{r}
+##UMI统计画图
+plot1 <- VlnPlot(mydata, features = "nCount_Spatial", pt.size = 0.1) + NoLegend()
+plot2 <- SpatialFeaturePlot(mydata, features = "nCount_Spatial") + theme(legend.position = "right")
+plot_grid(plot1, plot2)
+```
+```{r}
+##gene数目统计画图
+plot1 <- VlnPlot(mydata, features = "nFeature_Spatial", pt.size = 0.1) + NoLegend()
+plot2 <- SpatialFeaturePlot(mydata, features = "nFeature_Spatial") + theme(legend.position = "right")
+plot_grid(plot1, plot2)
+```
+
+```{r}
+mydata2 <- subset(mydata, subset = nFeature_Spatial > 200 & nFeature_Spatial <7500 & nCount_Spatial > 1000 & nCount_Spatial < 60000 & percent.mt < 25)
+mydata2
+```
+```{r}
+plot1 <- VlnPlot(mydata2, features = "nCount_Spatial", pt.size = 0.1) + NoLegend()
+plot2 <- SpatialFeaturePlot(mydata2, features = "nCount_Spatial") + theme(legend.position = "right")
+plot_grid(plot1, plot2)
+```
+```{r}
+mydata <- SCTransform(mydata, assay = "Spatial", verbose = FALSE)
+mydata <- RunPCA(mydata, assay = "SCT", verbose = FALSE)
+mydata <- FindNeighbors(mydata, reduction = "pca", dims = 1:30)
+mydata <- FindClusters(mydata, verbose = FALSE)
+mydata <- RunUMAP(mydata, reduction = "pca", dims = 1:30)
+mydata <- RunTSNE(mydata, reduction = "pca",dims = 1:30)
+```
+```{r}
+SpatialDimPlot(mydata, cells.highlight = CellsByIdentities(object = mydata, idents = c(1, 2, 3, 4, 
+   5, 6)), facet.highlight = TRUE, ncol = 3)
+```
+
+```{r}
+#某一基因表达热图
+SpatialFeaturePlot(mydata, features = c("KLK3"))
+p1 <- SpatialFeaturePlot(mydata, features = "KLK3", pt.size.factor = 1)
+p2 <- SpatialFeaturePlot(mydata, features = "KLK3", alpha = c(0.1, 1))
+p1 + p2
+```
+```{r}
+FeaturePlot(mydata, features = c("KLK3"), cols = c("grey", "red"),reduction = "umap")
+```
+
+
+
+
+```{r}
+p1 <- DimPlot(mydata, reduction = "umap", label = TRUE)
+p2 <- SpatialDimPlot(mydata, label = TRUE, label.size = 3)
+p1 + p2
+```
+```{r}
+p1 <- DimPlot(mydata, reduction = "tsne", label = TRUE)
+p2 <- SpatialDimPlot(mydata, label = TRUE, label.size = 3)
+p1 + p2
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+SpatialDimPlot(mydata, interactive = TRUE)
+SpatialFeaturePlot(mydata, features = "KLK3", interactive = TRUE)
+```
+
+
+
+
+
+
+```{r}
+de_markers <- FindMarkers(mydata, ident.1 = 5, ident.2 = 6)
+SpatialFeaturePlot(object = mydata, features = rownames(de_markers)[1:3], alpha = c(0.1, 1), ncol = 3)
+```
+```{r}
+data.markers <- FindAllMarkers(mydata, only.pos = FALSE, min.pct = 0.25, logfc.threshold = 0.25,test.use = "wilcox")
+```
+```{r}
+topgene<-data.markers %>% group_by(cluster) %>% top_n(n = 3, wt = avg_log2FC)
+DoHeatmap(mydata, features = topgene$gene,size = 2) + NoLegend()
+```
+
+```{r}
+VlnPlot(mydata,features = c('MSMB','KLK3','PCP4'), group.by = "seurat_clusters",pt.size = 0)
+```
+```{r}
+FeaturePlot(data.merge, features = c('KLK3','PCP4'), cols = c("grey", "red"),reduction = "tsne")
+```
+
+
+```{r}
+library(SingleR)
+library(Seurat) 
+expdata =mydata[["Spatial"]]@data
+ref.se=MouseRNAseqData()
+
+anno.cell.main=SingleR(test=expdata , ref = ref.se, labels = ref.se$label.main)  
+mydata[["SingleR.labels"]]<- as.character(anno.cell.main$labels)
+DimPlot(mydata,reduction = "tsne" ,group.by="SingleR.labels")
+```
+```{r}
+cluster_type <-tapply(Idents(mydata),mydata[["SingleR.labels"]],table)
+
+celltypes <-names(cluster_type)
+
+cluster_type <-as.data.frame(bind_cols(cluster_type))
+
+rownames(cluster_type)<- names(cluster_type[[1]])
+
+colnames(cluster_type)<- celltypes
+
+cluster_type
+```
+
+```{r}
+library(monocle)
+#读取前面保存的seurat对象文件
+
+#选择要分析的亚群
+subdata <- subset(mydata, idents = c(2,5,7,9,10))
+```
+
+```{r}
+#单细胞count文件、细胞类型注释文件、基因注释文件
+expression_matrix = mydata@assays$Spatial@counts
+cell_metadata <- data.frame(group = mydata[['orig.ident']],clusters = Idents(mydata))
+gene_annotation <- data.frame(gene_short_name = rownames(expression_matrix), stringsAsFactors = F) 
+rownames(gene_annotation) <- rownames(expression_matrix)
+#####新建CellDataSet object
+pd <- new("AnnotatedDataFrame", data = cell_metadata)
+fd <- new("AnnotatedDataFrame", data = gene_annotation)
+HSMM <- newCellDataSet(expression_matrix,
+                        phenoData = pd,
+                        featureData = fd,
+                        expressionFamily=negbinomial.size())
+```
+
+```{r}
+#评估SizeFactors
+HSMM_myo <- estimateSizeFactors(HSMM)
+#计算离散度
+HSMM_myo <- estimateDispersions(HSMM_myo)
+#计算差异
+diff_test_res1 <- differentialGeneTest(HSMM_myo,fullModelFormulaStr = '~clusters', cores = 4)
+#选择差异基因
+ordering_genes <- subset(diff_test_res1, qval < 0.05)[,'gene_short_name']
+#基因过滤
+HSMM_myo <- setOrderingFilter(HSMM_myo, ordering_genes)
+#降维
+HSMM_myo <- reduceDimension(HSMM_myo, max_components=2, method = 'DDRTree')
+#细胞排序
+HSMM_myo <- orderCells(HSMM_myo)
+```
+
+```{r}
+#查看亚群分化关系
+plot_cell_trajectory(HSMM_myo, color_by = "clusters",show_branch_points = F,cell_size =0.5)
+```
+```{r}
+#按亚群分开展示
+plot_cell_trajectory(HSMM_myo, color_by = "clusters",cell_size =0.5) + facet_wrap(~clusters, nrow = 4)
+```
+
+```{r}
+#分样本展示
+plot_cell_trajectory(HSMM_myo, color_by = "orig.ident",show_branch_points = F,cell_size =0.5)
+```
+
+
+
+```{r}
+#merge
+data.merge <- merge(mydata1, mydata2)
+DefaultAssay(data.merge) <- "SCT"
+VariableFeatures(data.merge) <- c(VariableFeatures(mydata1), VariableFeatures(mydata2))
+data.merge <- RunPCA(data.merge, verbose = FALSE)
+data.merge <- FindNeighbors(data.merge, dims = 1:30)
+data.merge <- FindClusters(data.merge, verbose = FALSE)
+data.merge <- RunUMAP(data.merge, reduction = "pca",dims = 1:30)
+data.merge <- RunTSNE(data.merge, reduction = "pca",dims = 1:30)
+SpatialDimPlot(data.merge, label = TRUE, label.size = 3)
+SpatialDimPlot(data.merge, label = FALSE, label.size = 3)
+```
+
+

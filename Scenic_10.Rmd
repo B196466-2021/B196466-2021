@@ -1,0 +1,132 @@
+---
+title: "scenic"
+output: html_document
+date: "2023-03-23"
+---
+
+```{r}
+# INSTALL SCENIC
+#if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+#BiocManager::version()
+# If your bioconductor version is previous to 4.0, see the section bellow
+
+## Required
+#BiocManager::install(c("AUCell", "RcisTarget"),ask = F,update = F) 
+#BiocManager::install(c("GENIE3"),ask = F,update = F)  # Optional. Can be replaced by GRNBoost
+
+## Optional (but highly recommended):
+# To score the network on cells (i.e. run AUCell):
+#BiocManager::install(c("zoo", "mixtools", "rbokeh"),ask = F,update = F) 
+# For various visualizations and perform t-SNEs:
+#BiocManager::install(c("DT", "NMF", "ComplexHeatmap", "R2HTML", "Rtsne"),ask = F,update = F)
+# To support paralell execution (not available in Windows):
+#BiocManager::install(c("doMC", "doRNG"),ask = F,update = F)
+# To export/visualize in http://scope.aertslab.org
+#if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
+#devtools::install_github("aertslab/SCopeLoomR", build_vignettes = TRUE)
+
+#if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
+#devtools::install_github("aertslab/SCENIC") 
+#packageVersion("SCENIC")
+```
+
+
+```{r}
+library(foreach)
+library(SCENIC)
+library(Seurat)
+library(GENIE3)
+library(AUCell)
+library(RcisTarget)
+library(loomR)
+data(list="motifAnnotations_hgnc_v9", package="RcisTarget")
+motifAnnotations_hgnc <- motifAnnotations_hgnc_v9
+# 保证 cisTarget_databases 文件夹下面有下载好2个1G的文件
+scenicOptions <- initializeScenic(org="hgnc", dbDir="cisTarget_databases", nCores=10)
+# scenicOptions@inputDatasetInfo$cellInfo <- "int/cellInfo.Rds"
+```
+
+
+```{r}
+exprMat  <-  as.matrix(compare@assays$RNA@data)
+dim(exprMat)
+exprMat[1:4,1:4] 
+cellInfo <-  compare@meta.data[,c(13,2,3)]
+colnames(cellInfo)=c('CellType', 'nGene' ,'nUMI')
+head(cellInfo)
+table(cellInfo$CellType)
+```
+
+```{r}
+### Co-expression network
+genesKept <- geneFiltering(exprMat, scenicOptions)
+exprMat_filtered <- exprMat[genesKept, ]
+exprMat_filtered[1:4,1:4]
+dim(exprMat_filtered)
+runCorrelation(exprMat_filtered, scenicOptions)
+exprMat_filtered_log <- log2(exprMat_filtered+1)
+#转入后台
+#runGenie3(exprMat_filtered_log, scenicOptions)
+```
+
+
+```{r}
+### Build and score the GRN
+exprMat_log <- log2(exprMat+1)
+scenicOptions@settings$dbs <- scenicOptions@settings$dbs["10kb"] # Toy run settings
+scenicOptions <- runSCENIC_1_coexNetwork2modules(scenicOptions)
+scenicOptions <- runSCENIC_2_createRegulons(scenicOptions,
+                                            coexMethod=c("top5perTarget")) # Toy run settings
+library(doParallel)
+scenicOptions <- runSCENIC_3_scoreCells(scenicOptions, exprMat_log ) 
+scenicOptions <- runSCENIC_4_aucell_binarize(scenicOptions)
+tsneAUC(scenicOptions, aucType="AUC") # choose settings
+```
+```{r}
+export2loom(scenicOptions, exprMat)
+saveRDS(scenicOptions, file="int/scenicOptions.Rds") 
+
+library(Seurat) 
+library(SCENIC)
+library(doParallel)
+
+scenicOptions=readRDS(file="int/scenicOptions.Rds")
+```
+
+```{r}
+### Exploring output 
+# Check files in folder 'output'
+# Browse the output .loom file @ http://scope.aertslab.org
+
+# output/Step2_MotifEnrichment_preview.html in detail/subset:
+motifEnrichment_selfMotifs_wGenes <- loadInt(scenicOptions, "motifEnrichment_selfMotifs_wGenes") 
+as.data.frame(sort(table(motifEnrichment_selfMotifs_wGenes$highlightedTFs),decreasing = T))
+```
+
+```{r}
+tableSubset <- motifEnrichment_selfMotifs_wGenes[highlightedTFs=="IRF7"]
+viewMotifs(tableSubset) 
+regulonTargetsInfo <- loadInt(scenicOptions, "regulonTargetsInfo")
+tableSubset <- regulonTargetsInfo[TF=="IRF7" & highConfAnnot==TRUE]
+viewMotifs(tableSubset) 
+```
+
+
+```{r}
+library(Seurat) 
+library(SCENIC)
+library(doParallel)
+library(SCopeLoomR)
+scenicOptions=readRDS(file="int/scenicOptions.Rds")
+scenicLoomPath <- getOutName(scenicOptions, "loomFile")
+loom <- open_loom(scenicLoomPath)
+# Read information from loom file:
+regulons_incidMat <- get_regulons(loom)
+regulons <- regulonsToGeneLists(regulons_incidMat)
+regulonsAUC <- get_regulons_AUC(loom)
+regulonsAucThresholds <- get_regulon_thresholds(loom)
+embeddings <- get_embeddings(loom)
+```
+
+
+

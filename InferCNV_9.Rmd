@@ -1,0 +1,136 @@
+---
+title: "InterCNV"
+output: html_document
+date: "2023-03-21"
+---
+
+```{r}
+#saveRDS(compare, file="compare_for_InferCNV.Rds")
+#上皮/内皮细胞 恶性肿瘤 癌症旁 良性肿瘤
+#########################################################################################################################################################
+#gene的表达量（count表达矩阵），gene的位置（基因染色体信息），比较信息（分组信息）
+#inferCNV需要三个文件1.count表达矩阵，2.分组信息，3.基因染色体信息
+
+#InferCNV可以用于肿瘤单细胞RNA-Seq数据中鉴定大规模染色体拷贝数变异，例如整个染色体或大片段染色体的#扩增或缺失。基本思路是在整个基因组范围内，将每个肿瘤细胞基因表达与平均表达或“正常”参考细胞基因表
+#达对比，确定其表达强度。
+
+#制作基因染色体位置信息 和提取表达矩阵
+dat <- GetAssayData(compare,assay = "RNA",slot = "counts")
+#dat <- as.data.frame(dat)
+#dat = as.data.frame(compare@assays$RNA@counts)
+#dat = as.matrix(compare@assays$RNA@counts[,colnames(compare)])
+
+expFile=system.file("extdata", "oligodendroglioma_expression_downsampled.counts.matrix.gz", package = "infercnv")  #这个是inferCNV自带参比数据集  用来做infer
+geneFile=system.file("extdata", "oligodendroglioma_annotations_downsampled.txt", package = "infercnv")   #这个是inferCNV自带参比数据集  用来做infer
+groupFiles=system.file("extdata", "gencode_downsampled.EXAMPLE_ONLY_DONT_REUSE.txt", package = "infercnv")    #这个是inferCNV自带参比数据集  用来做infer
+
+library(AnnoProbe)    #用jimmy老师的包  这个包很强大，如同数据库，这一次我们用这个包做一个基因与其染色体位置
+geneInfor=annoGene(rownames(dat),"SYMBOL",'human')    #可能有一些gene 无法anno
+colnames(geneInfor)
+geneInfor=geneInfor[with(geneInfor, order(chr, start)),c(1,4:6)]      
+geneInfor=geneInfor[!duplicated(geneInfor[,1]),]
+length(unique(geneInfor[,1]))
+head(geneInfor)
+
+dat=dat[rownames(dat) %in% geneInfor[,1],]
+dat=dat[match(geneInfor[,1], rownames(dat)),]   
+#将表达矩阵的基因排列顺序与geneInfor的基因排列顺序弄成一致
+rownames(geneInfor) <- geneInfor$SYMBOL   
+geneInfor <- geneInfor[,-1]     #这样我们就制作好了染色体位置信息和排列顺序好的count表达矩阵
+
+#制作mate信息
+meta <- subset(compare@meta.data,select = c("seurat_clusters"))   #假如你后面是想分析每一个群的CNV的话  这里要改成seruat_cluster
+names(meta)[names(meta) == 'seurat_clusters'] <- 'seurat_clusters'
+
+#验证1   表达矩阵的列名要与meta的行名一致
+identical(colnames(dat),rownames(meta))  
+#验证2   表达矩阵的行名要与geneInfor的行名一致
+identical(rownames(dat),rownames(geneInfor))
+
+#因此三个输入数据准备好了   dat-表达矩阵  meta-分组信息  geneInfor-基因染色体信息
+```
+
+```{r}
+library(Seurat)
+library(tidyverse)
+library(ggplot2)
+library(infercnv)
+library(ComplexHeatmap)
+library(ggpubr)
+#二步法构建对象
+infercnv_obj = CreateInfercnvObject(raw_counts_matrix=dat,
+                                    annotations_file=meta,
+                                    delim="\t",
+                                    gene_order_file=geneInfor,
+                                    ref_group_names=c("10","16"))#选基础的细胞  或者样本 看meta的输入类型也可以不选择 算法根据平均值来自己算
+infercnv_obj = infercnv::run(infercnv_obj,
+                             cutoff=0.1, # cutoff=1 works well for Smart-seq2, and cutoff=0.1 works well for 10x Genomics
+                             out_dir="cnv1/", 
+                             cluster_by_groups=TRUE,
+                             #write_expr_matrix=T,# 选择TRUE是按样本分组 改为FALSE会进行按另一个参数k_obs_groups给出的分组数（默认为1）进行分组
+                             denoise=F,     #是否去噪
+                             HMM=F)   # 是否基于HMM预测CNV,True的话时间很久
+
+
+
+#结果输出在当前工作路径下的out_dir文件夹下（最终会输出很多文件在out_dir的目录下）   可以直接用里面的热图
+#也就可以对热图进行改造  换颜色（用inferCNV的官方的画图函数）
+#infercnv::plot_cnv(infercnv_obj, #上两步得到的infercnv对象
+                   #plot_chr_scale = T, #画染色体全长，默认只画出（分析用到的）基因
+                   #output_filename = "better_plot",output_format = "pdf", #保存为pdf文件
+                   #custom_color_pal =  color.palette(c("#8DD3C7","white","#BC80BD"), c(2, 2))) #改颜色
+```
+
+
+```{r}
+library(gridExtra)
+library(grid)
+require(dendextend)
+require(ggthemes)
+library(tidyverse)
+library(Seurat)
+library(miscTools)
+
+# 处理observation
+expr <- read.table("/home/spdx/yutc/tiancy/scRNA/Code/step9_inferCNV/cnv1/infercnv.observations.txt", header=T) %>% as.matrix()
+expr.scale <- scale(t(expr))
+tmp1 <- sweep(expr.scale, 2, apply(expr.scale, 2, min),'-')
+tmp2 <- apply(expr.scale, 2, max) - apply(expr.scale,2,min)
+expr_1 <- t(2*sweep(tmp1, 2, tmp2, "/")-1)
+cnv_score <- as.data.frame(colSums(expr_1 * expr_1))
+colnames(cnv_score)="cnv_score"
+cnv_score <- rownames_to_column(cnv_score, var='cell')
+write.table(cnv_score,file="cnv_score.csv",row.names = FALSE,quote=FALSE,sep=",")
+```
+
+```{r}
+grp<-read.table("/home/spdx/yutc/tiancy/scRNA/Code/step9_inferCNV/cnv1/infercnv.observation_groupings.txt",sep=' ',header=T)
+obs<-read.table("/home/spdx/yutc/tiancy/scRNA/Code/step9_inferCNV/cnv1/infercnv.observations.txt",header=T,check.names=F)
+obs[obs > 0 & obs < 0.3] <- 2
+obs[obs >= 0.3 & obs < 0.7] <- 1
+obs[obs >= 0.7 & obs < 1.3] <- 0
+obs[obs >= 1.3 & obs <= 1.5] <- 1
+obs[obs > 1.5 & obs <= 2] <- 2
+obs[obs > 2] <- 2
+
+scores <- as.data.frame(colSums(obs))
+scores$cluster <- grp$Annotation.Group
+colnames(scores) <- c("score", "cluster")
+
+library(ggplot2)
+ggplot(scores, aes(x=cluster, y=score, fill=factor(cluster)))+
+  geom_boxplot(outlier.shape = NA)+
+  scale_fill_manual(values=c("#8DD3C7", "#A9A0B2", "#F0D1E1", "#FFED6F","red","blue","black","white","yellow","pink","brown","purple","green","orange","grey","lightpink"))+
+  labs(fill = "Cluster")
+```
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,106 @@
+---
+title: "monocole"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r}
+library(monocle)
+data <- as(as.matrix(compare@assays$RNA@counts), 'sparseMatrix')
+pd <- new('AnnotatedDataFrame', data = compare@meta.data)
+fData <- data.frame(gene_short_name = row.names(data), row.names = row.names(data))
+fd <- new('AnnotatedDataFrame', data = fData)
+monocle_cds <- newCellDataSet(data,
+                              phenoData = pd,
+                              featureData = fd,
+                              lowerDetectionLimit = 0.5,
+                              expressionFamily = negbinomial.size())
+
+```
+
+```{r}
+#估计size factor和离散度
+monocle_cds <- estimateSizeFactors(monocle_cds)
+monocle_cds <- estimateDispersions(monocle_cds)
+```
+
+```{r}
+#过滤低质量的细胞
+monocle_cds <- detectGenes(monocle_cds, min_expr = 0.1)
+print(head(fData(monocle_cds)))
+```
+
+```{r}
+HSMM=monocle_cds
+disp_table <- dispersionTable(HSMM)
+unsup_clustering_genes <- subset(disp_table, mean_expression >= 0.1)
+HSMM <- setOrderingFilter(HSMM, unsup_clustering_genes$gene_id)
+plot_ordering_genes(HSMM)
+```
+
+```{r}
+plot_pc_variance_explained(HSMM, return_all = F)
+```
+
+```{r}
+HSMM <- reduceDimension(HSMM, max_components = 2, num_dim = 6,
+                reduction_method = 'tSNE', verbose = T)
+HSMM <- clusterCells(HSMM, num_clusters = 10)
+plot_cell_clusters(HSMM)
+```
+
+```{r}
+##使用clusters差异表达基因
+deg.cluster <- FindAllMarkers(compare)
+diff.genes <- subset(deg.cluster,p_val_adj<0.05)$gene
+HSMM <- setOrderingFilter(HSMM, diff.genes)
+plot_ordering_genes(HSMM)
+##使用seurat选择的高变基因
+#var.seurat <- VariableFeatures(compare)
+#HSMM <- setOrderingFilter(HSMM, var.genes)
+#plot_ordering_genes(HSMM)
+##使用monocle选择的高变基因
+#disp_table <- dispersionTable(HSMM)
+#disp.genes <- subset(disp_table, mean_expression >= 0.1 & dispersion_empirical >= 1 * dispersion_fit)$gene_id
+#HSMM <- setOrderingFilter(HSMM, disp.genes)
+#plot_ordering_genes(HSMM)
+```
+
+```{r}
+HSMM <- reduceDimension(HSMM, max_components = 2,method = 'DDRTree')
+```
+
+```{r}
+HSMM <- orderCells(HSMM)
+plot_cell_trajectory(HSMM, color_by = "seurat_clusters")
+```
+
+```{r}
+library(monocle3)
+cell_metadata <- data.frame(compare@meta.data, cell.type=compare@active.ident)
+cds <- new_cell_data_set(rds@assays$RNA@counts, cell_metadata=cell_metadata)
+cds <- preprocess_cds(cds, num_dim=50)
+cds <- align_cds(cds, alignment_group='group')
+cds <- reduce_dimension(cds)
+cds <- cluster_cells(cds)
+cds <- learn_graph(cds)
+p <- plot_cells(cds, color_cells_by = "cell.type", label_groups_by_cluster=F, label_leaves=FALSE, label_branch_points=FALSE, group_label_size=4)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
