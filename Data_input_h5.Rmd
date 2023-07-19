@@ -1,0 +1,103 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-07-17"
+---
+
+```{r}
+library(Seurat)
+GSM7475112_hbca_v01 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475112_hbca_v01_filtered_feature_bc_matrix.h5")
+GSM7475113_hbca_v02 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475113_hbca_v02_filtered_feature_bc_matrix.h5")
+GSM7475114_hbca_v03 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475114_hbca_v03_filtered_feature_bc_matrix.h5")
+GSM7475115_hbca_v04 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475115_hbca_v04_filtered_feature_bc_matrix.h5")
+GSM7475116_hbca_v05 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475116_hbca_v05_filtered_feature_bc_matrix.h5")
+GSM7475117_hbca_v06 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475117_hbca_v06_filtered_feature_bc_matrix.h5")
+GSM7475118_hbca_v07 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475118_hbca_v07_filtered_feature_bc_matrix.h5")
+GSM7475119_hbca_v08 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475119_hbca_v08_filtered_feature_bc_matrix.h5")
+GSM7475120_hbca_v09 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475120_hbca_v09_filtered_feature_bc_matrix.h5")
+GSM7475121_hbca_v10 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475121_hbca_v10_filtered_feature_bc_matrix.h5")
+GSM7475145_hbca_n01 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475145_hbca_n01_filtered_feature_bc_matrix.h5")
+GSM7475146_hbca_n02 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475146_hbca_n02_filtered_feature_bc_matrix.h5")
+GSM7475147_hbca_n03 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475147_hbca_n03_filtered_feature_bc_matrix.h5")
+GSM7475148_hbca_n04 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475148_hbca_n04_filtered_feature_bc_matrix.h5")
+GSM7475149_hbca_n05 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475149_hbca_n05_filtered_feature_bc_matrix.h5")
+GSM7475150_hbca_n06 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475150_hbca_n06_filtered_feature_bc_matrix.h5")
+GSM7475151_hbca_n07 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475151_hbca_n07_filtered_feature_bc_matrix.h5")
+GSM7475152_hbca_n08 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475152_hbca_n08_filtered_feature_bc_matrix.h5")
+GSM7475153_hbca_n09 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475153_hbca_n09_filtered_feature_bc_matrix.h5")
+GSM7475154_hbca_n10 <- Read10X_h5("/home/spdx/yutc/GSE195665_RAW/GSM7475154_hbca_n10_filtered_feature_bc_matrix.h5")
+```
+
+
+```{r}
+GSM7475112_hbca_v01.seu <- CreateSeuratObject(counts = GSM7475112_hbca_v01)
+GSM7475113_hbca_v02.seu <- CreateSeuratObject(counts = GSM7475113_hbca_v02)
+GSM7475114_hbca_v03.seu <- CreateSeuratObject(counts = GSM7475114_hbca_v03)
+GSM7475115_hbca_v04.seu <- CreateSeuratObject(counts = GSM7475115_hbca_v04)
+GSM7475116_hbca_v05.seu <- CreateSeuratObject(counts = GSM7475116_hbca_v05)
+GSM7475117_hbca_v06.seu <- CreateSeuratObject(counts = GSM7475117_hbca_v06)
+GSM7475118_hbca_v07.seu <- CreateSeuratObject(counts = GSM7475118_hbca_v07)
+GSM7475119_hbca_v08.seu <- CreateSeuratObject(counts = GSM7475119_hbca_v08)
+GSM7475120_hbca_v09.seu <- CreateSeuratObject(counts = GSM7475120_hbca_v09)
+GSM7475121_hbca_v10.seu <- CreateSeuratObject(counts = GSM7475121_hbca_v10)
+GSM7475145_hbca_n01.seu <- CreateSeuratObject(counts = GSM7475145_hbca_n01)
+GSM7475146_hbca_n02.seu <- CreateSeuratObject(counts = GSM7475146_hbca_n02)
+GSM7475147_hbca_n03.seu <- CreateSeuratObject(counts = GSM7475147_hbca_n03)
+GSM7475148_hbca_n04.seu <- CreateSeuratObject(counts = GSM7475148_hbca_n04)
+GSM7475149_hbca_n05.seu <- CreateSeuratObject(counts = GSM7475149_hbca_n05)
+GSM7475150_hbca_n06.seu <- CreateSeuratObject(counts = GSM7475150_hbca_n06)
+GSM7475151_hbca_n07.seu <- CreateSeuratObject(counts = GSM7475151_hbca_n07)
+GSM7475152_hbca_n08.seu <- CreateSeuratObject(counts = GSM7475152_hbca_n08)
+GSM7475153_hbca_n09.seu <- CreateSeuratObject(counts = GSM7475153_hbca_n09)
+GSM7475154_hbca_n10.seu <- CreateSeuratObject(counts = GSM7475154_hbca_n10)
+```
+
+```{r}
+GSM7475112_hbca_v01.seu$type <- "GSM7475112"
+GSM7475113_hbca_v02.seu$type <- "GSM7475113"
+GSM7475114_hbca_v03.seu$type <- "GSM7475114"
+GSM7475115_hbca_v04.seu$type <- "GSM7475115"
+GSM7475116_hbca_v05.seu$type <- "GSM7475116"
+GSM7475117_hbca_v06.seu$type <- "GSM7475117"
+GSM7475118_hbca_v07.seu$type <- "GSM7475118"
+GSM7475119_hbca_v08.seu$type <- "GSM7475119"
+GSM7475120_hbca_v09.seu$type <- "GSM7475120"
+GSM7475121_hbca_v10.seu$type <- "GSM7475121"
+GSM7475145_hbca_n01.seu$type <- "GSM7475145"
+GSM7475146_hbca_n02.seu$type <- "GSM7475146"
+GSM7475147_hbca_n03.seu$type <- "GSM7475147"
+GSM7475148_hbca_n04.seu$type <- "GSM7475148"
+GSM7475149_hbca_n05.seu$type <- "GSM7475149"
+GSM7475150_hbca_n06.seu$type <- "GSM7475150"
+GSM7475151_hbca_n07.seu$type <- "GSM7475151"
+GSM7475152_hbca_n08.seu$type <- "GSM7475152"
+GSM7475153_hbca_n09.seu$type <- "GSM7475153"
+GSM7475154_hbca_n10.seu$type <- "GSM7475154"
+```
+
+
+
+
+
+```{r}
+seu.list <- list(GSM7475112_hbca_v01.seu, GSM7475113_hbca_v02.seu, GSM7475114_hbca_v03.seu, GSM7475115_hbca_v04.seu,GSM7475116_hbca_v05.seu,GSM7475117_hbca_v06.seu,GSM7475118_hbca_v07.seu,GSM7475119_hbca_v08.seu,GSM7475120_hbca_v09.seu,GSM7475121_hbca_v10.seu)
+
+# normalize data and find feature genes
+seu.list <- lapply(X = seu.list, FUN = function(x) {
+  x <- NormalizeData(x) # normalize data
+  x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 10000) # find 2k feature genes
+})
+
+# select features that are repeatedly variable across datasets for integration
+features <- SelectIntegrationFeatures(object.list = seu.list)
+
+# find anchors in CCA-reduced space (CCA - canonical correlation analysis)
+data.anchors <- FindIntegrationAnchors(object.list = seu.list, 
+                                       anchor.features = features,
+                                       reduction = "cca", 
+                                       verbose=FALSE)
+
+# integrate data using the identified anchors
+data.combined <- IntegrateData(anchorset = data.anchors, verbose=FALSE)
+```
+
