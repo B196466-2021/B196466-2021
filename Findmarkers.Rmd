@@ -1,0 +1,78 @@
+---
+title: "Findmarkers"
+output: html_document
+date: "2023-05-10"
+---
+
+```{r}
+# Define 
+#compare$label<-ifelse(compare$label %in% c(1,3,4,6,13),"DC_g1",compare$label)
+#compare$celltype<-paste(compare$label,compare$type,sep="_")
+
+Idents(compare)<-"celltype"
+# Find differentially expressed genes
+DC_g1.response<- FindMarkers(compare, ident.1 = "DC_g1_Post_BCG", ident.2 = "DC_g1_Pre_BCG", verbose = FALSE)
+head(DC_g1.response, n = 15)
+write.csv(DC_g1.response,file="table1.csv")
+```
+
+```{r}
+# Volcano plot
+png("volcano.png")
+EnhancedVolcano(DC_g1.response,lab = rownames(DC_g1.response),x = "avg_log2FC",y = "p_val_adj",pCutoff = 0.05,FCcutoff = 0.5)
+dev.off
+```
+
+```{r}
+# Define dendritic cells group 1 subset
+Idents(compare)<-compare$label
+DC1<- subset(compare, idents=c("DC_g1"))
+#FeaturePlot
+FeaturePlot<-FeaturePlot(DC1,features = c("RNF19B"), split.by = "type", max.cutoff ="q90", cols = c("grey", "red"))
+FeaturePlot
+ggsave("FeaturePlot.png",FeaturePlot)
+```
+
+```{r}
+plots <- VlnPlot(DC1, features = c("RNF19B"), group.by = "type",pt.size = 0.01, combine = FALSE,assay = "RNA",log=TRUE)
+wrap_plots(plots = plots, ncol = 1)
+```
+
+
+
+
+
+
+
+
+```{r}
+library(Seurat)
+library(tidyverse)
+library(clusterProfiler)
+library(pathview)
+library(enrichplot)
+library(msigdbr)
+library(dplyr)
+
+# Define the whole dendritic cells subset
+## 在寻找差异基因之前，把默认的assay切换为RNA。
+DefaultAssay(compare) <- 'RNA'
+## 定义好你想要在哪一个分群基础上找差异表达基因
+Idents(compare)<-compare$celltype
+# 对所有Cluster依次进行差异表达分析
+all.clusters.markers <- FindAllMarkers(compare)
+head(all.clusters.markers)
+
+# find the top 20 genes
+all.clusters.markers %>%
+    group_by(cluster) %>%
+    top_n(n = 20, wt = avg_log2FC) -> top20
+# make heatmap
+DefaultAssay(compare) <- "integrated"
+DoHeatmap(compare, features = top20$gene)->Heatmap 
+ggsave("Heatmap.png",Heatmap,height=20,width=15)
+# create table
+#top20
+#write.csv(top20,file="top20.csv")
+```
+

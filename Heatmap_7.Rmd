@@ -1,0 +1,596 @@
+---
+title: "Heatmap"
+output: html_document
+date: "2023-03-30"
+---
+```{r}
+#############################################
+#Subtype selection
+#############################################
+library(Seurat)
+Idents(compare)<-compare$seurat_clusters
+Epithelial_cells<- subset(compare, idents=c("4","6","9"))
+```
+
+```{r}
+#############################################
+#All samples selection
+############################################
+DefaultAssay(Epithelial_cells)<-"RNA"
+Epithelial_cells = NormalizeData(Epithelial_cells,verbose =F)
+Epithelial_cells = ScaleData(Epithelial_cells,verbose =F)
+sample.averages<-AverageExpression(Epithelial_cells,group.by = "orig.ident")
+dense_matrix<-as.matrix(sample.averages$RNA)
+m_df<- as(dense_matrix, "dgCMatrix")
+
+library(org.Hs.eg.db)
+#m_df=Epithelial[["RNA"]]@counts# 检查行名(基因名)
+rownames(m_df)=toupper(rownames(m_df))
+ddata=t(m_df)
+s=colnames(ddata);head(s);tail(s)
+
+ls("package:org.Hs.eg.db")
+class(org.Hs.egSYMBOL)
+s2g=toTable(org.Hs.egSYMBOL)
+# 求小鼠的基因与人类的基因的交集，利用match函数，返回位置信息(如果没有对应，就返回NA)。存在NA的原因就是：小鼠有的对应不上人类基因名，并且人类的基因也有未知的
+g=s2g[match(s,s2g$symbol),1]
+
+dannot=data.frame(probe=s,"Gene.Symbol" =s, "EntrezGene.ID"=g)
+# 下面去掉ddata和dannot中NA的行
+ddata=ddata[,!is.na(dannot$EntrezGene.ID)] 
+#ID转换
+dannot=dannot[!is.na(dannot$EntrezGene.ID),]
+matrix <- as.matrix(ddata)
+```
+
+
+
+```{r}
+####################################
+#CRC
+#####################################
+matrix<-t(matrix)
+CMScaller(
+    matrix,
+    templates = CMScaller::templates.CMS,
+    rowNames = "symbol",
+    RNAseq = FALSE,
+    nPerm = 1000,
+    seed = NULL,
+    FDR = 0.05,
+    doPlot = TRUE,
+    verbose = TRUE
+)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+###################################
+#PAM50
+###################################
+table<-read.table("/home/spdx/yutc/scRNA/Raw_Data/Gene/PAM50基因.csv",header=TRUE,sep=',')
+PAM50<-table[,1]
+rownames(table)<-table[,1] #将数据框的第一列作为行名
+table<- subset(table, select = -c(X))#删除第一列
+
+#提取指定列
+select_matrix<- matrix[ ,colnames(matrix) %in% PAM50]
+select_matrix<-t(select_matrix)
+select_matrix<-as.data.frame(select_matrix)
+#colnames(select_matrix)<-"CID4463"
+#select_matrix <- expm1(x = select_matrix)
+
+centroids<-read.table("/home/spdx/yutc/scRNA/Raw_Data/Gene/pam50_centroid_median_withoutNormal.txt",header=TRUE,sep='\t')
+PAM50<-centroids[,1]
+rownames(centroids)<-centroids[,1]
+centroids<- subset(centroids, select = -c(X))#删除第一列
+```
+
+```{r}
+library(corrplot)
+data_merge<- merge(centroids,select_matrix,by = 'row.names', all = FALSE)
+rownames(data_merge)<-data_merge[,1] #将数据框的第一列作为行名
+data_merge<- subset(data_merge, select = -c(Row.names))#删除第一列
+#计算特征两两之间的相关系数
+M <- cor(data_merge,method = "spearman")
+#计算特征两两之间的相关性检验的P值
+Pval <- cor.mtest(data_merge)
+#画图展示特征两两之间的相关系数
+```
+
+```{r}
+N<-M[-c(1:4),1:4]
+subtype <- apply(N[,1:4], 1, function(x) colnames(N)[which.max(x)])
+N<-cbind(N, subtype)
+N<-as.data.frame(N)
+```
+
+
+```{r}
+file_path= "/home/spdx/yutc/scRNA/Code/step7_molecular_classification/Correlation matrix.png"
+png(height=500, width=500, file=file_path, type = "cairo")
+corrplot(M, method = "circle")
+dev.off ()
+
+View(Pval$p)
+write.table(Pval$p,file="P_value.csv",quote=FALSE,sep=",")
+write.table(select_matrix,file="matrix.csv",sep=",")
+write.table(N,file="subtype.csv",sep=",")
+#cortest_ra_com <- cor.test(select_matrix$CID3963, centroids$Basal, method = "spearman")
+#cor_ra_com <- cor(select_matrix$CID3963, centroids$Basal,method = "spearman")
+#cortest_ra_com
+#cor_ra_com
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+#Basal亚型细分
+Basal_gene<-c("UBD","GREM1","PRF1","IL2RB","CD8A","IRF1","SULF1","FN1","POSTN")
+matrix<- matrix[,colnames(matrix) %in% Basal_gene]
+matrix<-t(matrix)
+```
+
+```{r}
+Her2_gene<-c("CD2","GZMK","PSMB9","TAP1","HLA-F","STAT1","CXCL9","CKAP2","CDH11","FBN1","COL5A1","AEBP1","HTRA1")
+matrix<- matrix[,colnames(matrix) %in% Her2_gene]
+matrix<-t(matrix)
+```
+
+
+```{r}
+LumB_gene<-c("RIOK3","PRR11","LSM1","BRF2","EIF4EBP1","HLA-DPB","HLA-DRA","C3","CSF1R")
+matrix<- matrix[,colnames(matrix) %in% LumB_gene]
+matrix<-t(matrix)
+```
+
+
+```{r}
+library(ConsensusClusterPlus)
+#对基因表达数据执行中位数中心化，以用于后续聚类
+dc <- sweep(matrix,1, apply(matrix,1,median))
+
+#使用函数ConsensusClusterPlus()执行聚类
+cluster <- ConsensusClusterPlus(
+  d = dc, 
+  maxK = 4, 
+  pItem = 0.8, 
+  pFeature = 1, 
+  clusterAlg = "hc", 
+  distance = "spearman", 
+  seed = 1234, 
+  innerLinkage = "complete", 
+  finalLinkage = "complete", 
+  corUse = "pairwise.complete.obs",
+  plot = 'png', 
+  title = "example"
+)
+```
+
+```{r}
+#查看样本所属的聚类群
+#cluster
+
+#例如，查看当划分3个聚类群时，各样本所属的聚类情况
+#其它聚类群的情况，更改数字即可
+cluster<-cluster[[3]]$consensusClass 
+cluster_3<-as.data.frame(cluster)
+cluster3_new <- arrange(cluster_3, cluster)
+library(pheatmap)
+matrix=t(scale(t(matrix)))
+matrix[matrix>1.5]=1.5
+matrix[matrix<-1.5]=-1.5
+colnames(matrix)<-rownames(cluster3_new)
+pheatmap(matrix,show_rownames = T,show_colnames=T,annotation_col=cluster3_new,cluster_cols=F,cluster_rows=F)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+library(genefu)
+data(pam50.robust)
+s<-molecular.subtyping(sbt.model = "pam50",data=ddata,annot=dannot,do.mapping=TRUE)
+#group=compare@meta.data$seurat_clusters
+subtype=s$subtype
+subtype=data.frame(subtype)
+#subtypes=write.table(subtype,file="a.csv",row.names = T,quote=FALSE,sep=",")
+#subtypes<-read.table("a.csv",header=TRUE,sep=',')
+```
+
+```{r}
+pam50genes=pam50.robust$centroids.map[c(1,3)]
+# 发现有的基因已经不是标准的symbol了，PAM50是2009年的基因名，因此需要进行修改
+pam50genes[pam50genes$probe=='CDCA1',1]='NUF2'
+pam50genes[pam50genes$probe=='KNTC2',1]='NDC80'
+pam50genes[pam50genes$probe=='ORC6L',1]='ORC6'
+
+x=m_df
+pam50genes$probe[pam50genes$probe %in% rownames(x)]
+x=x[pam50genes$probe[pam50genes$probe %in% rownames(x)] ,]
+```
+
+```{r}
+y=t(x)
+y=data.frame(y)
+data_frame_merge <- merge(y,subtype,by = 'row.names', all = TRUE)
+m<-data_frame_merge[order(data_frame_merge$'subtype'),]
+rownames(m)<-m[,1] #将数据框的第一列作为行名
+m<-m[,-1] #将数据框的第一列删除，只留下剩余的列作为数据
+```
+
+```{r}
+sub<- data.frame(row.names = rownames(m), m[,51])
+colnames(sub)="subtype"
+data<-data.frame(m[,1:50])
+data=t(data)
+```
+
+```{r}
+library(pheatmap)
+data=t(scale(t(data)))
+data[data>1.6]=1.6
+data[data< -1.6]= -1.6
+ann_colors=list(subtype=c(Basal='red',Her2='pink',LumB='#87CEFA',LumA="#00008B",Normal="green"))
+pheatmap(data,show_rownames = T,show_colnames = F,annotation_col = sub,cluster_cols=F,cluster_rows=F,annotation_colors=ann_colors,color=colorRampPalette(c("green", "black","red"))(100) )
+#heatmap<-pheatmap(data,show_rownames = T,show_colnames = F,annotation_col = sub,cluster_cols=F,annotation_colors=ann_colors,color=colorRampPalette(c("green", "black","red"))(100))
+#ggsave("heatmap.png",heatmap,width = 6, height = 10, dpi = 150)
+
+
+# 在原来group_list基础上，添加亚型信息，为了下面pheatmap中的anno_col设置
+#tmp=data.frame(group=group,subtypes=subtype)
+#rownames(tmp)=colnames(x)
+# 画热图
+#
+#pheatmap(x,show_rownames = T,show_colnames = F,annotation_col = tmp)
+
+# 在原来group_list基础上，添加亚型信息，为了下面pheatmap中的anno_col设置
+#rownames(tmp)=colnames(x)
+# 画热图
+#library(pheatmap)
+#pheatmap(x,cluster_rows = T,cluster_cols = F,show_rownames =T,show_colnames = F,
+         #annotation_col = tmp)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+############################
+###72gene
+############################
+#dgcmatrix转matrix
+gene72<-c("APOBEC3G","CCL5","CCR2","CD2","CD3D","BAG1","ERBB2","ASPM","CTSL2","ACTR3B","GAPDH","BCL2","FGFR4","AURKA","MMP11","CDH3","GUSB","BLVRA","GRB7","BIRC5","EGFR","MRPL19","CD68","CCNB1","FOXC1","PSMC4","ER","CDC20","KRT14","SF3A1","CD52","FOXA1","CDK1","KRT17","TFRC","CD53","GSTM1","CENPU","KRT5","CORO1A","MAPT","CEP55","MIA","CXCL9","MDM2","MELK","MYC","HLA-DMA","MLPH","Ki67","PHGDH","HLA-DQA1","NAT1","NEK2","SFRP1","GZMA","PR","PRC1","GZMK","SCUBE2","PTTG1","IL2RG","SLC39A6","RRM2","LCK","TOP2A","LYZ","TPX2","PTPRC","TYMS","UBE2C","ZWINT")
+#提取指定列
+select_matrix<- matrix[ ,colnames(matrix) %in% gene72]
+select_matrix<-t(select_matrix)
+
+table<-read.table("乳腺癌72基因.csv",header=TRUE,sep=',')
+rownames(table)<-table[,1] #将数据框的第一列作为行名
+table<- subset(table, select = -c(X))#删除第一列
+```
+
+
+
+
+```{r}
+data_frame_merge_72 <- merge(table,select_matrix,by = 'row.names')
+data_frame_merge_72<- data_frame_merge_72[order(data_frame_merge_72$'Gene'),]
+
+### 提取注释
+gene11<- subset(data_frame_merge_72, select = c("Row.names","Gene"))
+rownames(gene11)<-gene11[,1] #将数据框的第一列作为行名
+gene11<- subset(gene11, select = -c(Row.names))#删除第一列
+### 提取矩阵
+gene12<- subset(data_frame_merge_72, select = -c(Gene))
+rownames(gene12)<-gene12[,1] #将数据框的第一列作为行名
+gene12<- subset(gene12, select = -c(Row.names))#删除第一列
+#gene12<-as.matrix(gene12)
+```
+
+
+```{r}
+select_matrix<-as.data.frame(select_matrix)
+select_matrix<-t(select_matrix)
+data_frame_merge_new <- merge(subtype,select_matrix,by = 'row.names', all = TRUE)
+data_frame_merge_new<-data_frame_merge_new[order(data_frame_merge_new$'subtype'),]
+
+### 提取注释
+gene13<- subset(data_frame_merge_new, select = c("Row.names","subtype"))
+rownames(gene13)<-gene13[,1] #将数据框的第一列作为行名
+gene13<- subset(gene13, select = -c(Row.names))#删除第一列
+### 提取矩阵
+gene14<- subset(data_frame_merge_new, select = -c(subtype))
+rownames(gene14)<-gene14[,1] #将数据框的第一列作为行名
+gene14<- subset(gene14, select = -c(Row.names))#删除第一列
+#gene12<-as.matrix(gene12)
+```
+
+```{r}
+#中文尝试
+#CairoPDF("char_1.pdf")
+#pdf图片保存的文件名称，除了pdf格式外，还可以 保存png，jpeg
+#dev.off()
+#这一步很重要，不可省略，否则char_1.pdf文件打开是空白的，文件大小为0。
+#library(Cairo)#加载Cairo
+#library(extrafont)
+
+gene14<-t(gene14)
+gene14<-as.data.frame(gene14)
+rownames(gene14)<-rownames(gene11)
+```
+
+
+```{r}
+library(pheatmap)
+gene14=t(scale(t(gene14)))
+gene14[gene14>1.5]=1.5
+gene14[gene14<-1.5]=-1.5
+ann_colors=list(subtype=c(Basal='red',Her2='pink',LumB='#87CEFA',LumA="#00008B",Normal="green"))
+heatmap<-pheatmap(gene14,show_rownames = T,show_colnames=T,annotation_row=gene11,annotation_col=gene13,cluster_cols=F,cluster_rows=F,color=colorRampPalette(c("green", "black","red"))(100),annotation_colors=ann_colors)
+ggsave("heatmap_72gene.png",heatmap,width = 10, height = 10, dpi = 150)
+##################################
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+###################################
+#PAM50
+###################################
+table<-read.table("/home/spdx/yutc/scRNA/Raw_Data/Gene/PAM50基因.csv",header=TRUE,sep=',')
+PAM50<-table[,1]
+rownames(table)<-table[,1] #将数据框的第一列作为行名
+table<- subset(table, select = -c(X))#删除第一列
+
+#提取指定列
+select_matrix<- matrix[ ,colnames(matrix) %in% PAM50]
+select_matrix<-t(select_matrix)
+select_matrix<-as.data.frame(select_matrix)
+```
+
+```{r}
+centroids<-read.table("/home/spdx/yutc/scRNA/Raw_Data/Gene/pam50_centroid_median.txt",header=TRUE,sep='\t')
+PAM50<-centroids[,1]
+rownames(centroids)<-centroids[,1]
+centroids<- subset(centroids, select = -c(X))#删除第一列
+```
+
+```{r}
+library(corrplot)
+data_merge<- merge(centroids,select_matrix,by = 'row.names', all = TRUE)
+rownames(data_merge)<-data_merge[,1] #将数据框的第一列作为行名
+data_merge<- subset(data_merge, select = -c(Row.names))#删除第一列
+#计算特征两两之间的相关系数
+M <- cor(data_merge,method = "spearman")
+#计算特征两两之间的相关性检验的P值
+Pval <- cor.mtest(data_merge)
+#画图展示特征两两之间的相关系数
+```
+
+```{r}
+file_path= "~/yutc/tiancy/scRNA/Raw_Data/Correlation matrix.png"
+png(height=500, width=500, file=file_path, type = "cairo")
+corrplot(M, method = "circle")
+dev.off ()
+```
+
+```{r}
+View(Pval$p)
+
+cortest_ra_com <- cor.test(select_matrix$CID3963, centroids$Basal, method = "spearman")
+cor_ra_com <- cor(select_matrix$CID3963, centroids$Basal,method = "spearman")
+cortest_ra_com
+cor_ra_com
+```
+
+```{r}
+data_frame_merge_72 <- merge(table,select_matrix,by = 'row.names')
+data_frame_merge_72<- data_frame_merge_72[order(data_frame_merge_72$'Gene'),]
+
+### 提取注释
+gene11<- subset(data_frame_merge_72, select = c("Row.names","Gene"))
+rownames(gene11)<-gene11[,1] #将数据框的第一列作为行名
+gene11<- subset(gene11, select = -c(Row.names))#删除第一列
+### 提取矩阵
+gene12<- subset(data_frame_merge_72, select = -c(Gene))
+rownames(gene12)<-gene12[,1] #将数据框的第一列作为行名
+gene12<- subset(gene12, select = -c(Row.names))#删除第一列
+#gene12<-as.matrix(gene12)
+```
+
+
+```{r}
+select_matrix<-as.data.frame(select_matrix)
+select_matrix<-t(select_matrix)
+data_frame_merge_new <- merge(subtype,select_matrix,by = 'row.names', all = TRUE)
+data_frame_merge_new<-data_frame_merge_new[order(data_frame_merge_new$'subtype'),]
+
+### 提取注释
+gene13<- subset(data_frame_merge_new, select = c("Row.names","subtype"))
+rownames(gene13)<-gene13[,1] #将数据框的第一列作为行名
+gene13<- subset(gene13, select = -c(Row.names))#删除第一列
+### 提取矩阵
+gene14<- subset(data_frame_merge_new, select = -c(subtype))
+rownames(gene14)<-gene14[,1] #将数据框的第一列作为行名
+gene14<- subset(gene14, select = -c(Row.names))#删除第一列
+#gene12<-as.matrix(gene12)
+```
+
+```{r}
+#中文尝试
+#CairoPDF("char_1.pdf")
+#pdf图片保存的文件名称，除了pdf格式外，还可以 保存png，jpeg
+#dev.off()
+#这一步很重要，不可省略，否则char_1.pdf文件打开是空白的，文件大小为0。
+#library(Cairo)#加载Cairo
+#library(extrafont)
+
+gene14<-t(gene14)
+gene14<-as.data.frame(gene14)
+rownames(gene14)<-rownames(gene11)
+```
+
+
+```{r}
+library(pheatmap)
+gene14=t(scale(t(gene14)))
+gene14[gene14>1.5]=1.5
+gene14[gene14<-1.5]=-1.5
+ann_colors=list(subtype=c(Basal='red',Her2='pink',LumB='#87CEFA',LumA="#00008B",Normal="green"))
+heatmap<-pheatmap(gene14,show_rownames = T,show_colnames=T,annotation_row=gene11,annotation_col=gene13,cluster_cols=F,cluster_rows=F,color=colorRampPalette(c("green", "black","red"))(100),annotation_colors=ann_colors)
+ggsave("heatmap_PAM50gene.png",heatmap,width = 10, height = 10, dpi = 150)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+a<- merge(sub,matrix,by = 'row.names')
+a<- a[order(a$'subtype'),]
+rownames(a)<-a[,1] #将数据框的第一列作为行名
+a<-a[,-1] #将数据框的第一列删除，只留下剩余的列作为数据
+a<-a[,-1]
+a<-t(a)
+```
+
+```{r}
+a=t(scale(t(a)))
+a[a>1.5]=1.5
+a[a<-1.5]= -1.5
+heatmap<-pheatmap(a,show_rownames = F,show_colnames=T,annotation_col=gene13,cluster_cols=F,cluster_rows=F,color=colorRampPalette(c("green", "black","red"))(100),annotation_colors=ann_colors)
+ggsave("heatmap_Allgene.png",heatmap,width = 10, height = 10, dpi = 150)
+```
+
+
+
+
+

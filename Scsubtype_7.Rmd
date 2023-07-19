@@ -1,0 +1,202 @@
+---
+title: "Scsubtype"
+output: html_document
+date: "2023-04-24"
+---
+
+```{r}
+library(Seurat)
+
+# read in scsubtype gene signatures
+sigdat <- read.csv("/home/spdx/yutc/scRNA/Raw_Data/NatGen_Supplementary_table_S4.csv")
+temp_allgenes <- c(as.vector(sigdat[,"Basal_SC"]),
+                   as.vector(sigdat[,"Her2E_SC"]),
+                   as.vector(sigdat[,"LumA_SC"]),
+                   as.vector(sigdat[,"LumB_SC"]))
+temp_allgenes <- unique(temp_allgenes[!temp_allgenes == ""])
+```
+
+```{r}
+#############################################
+#Subtype selection
+#############################################
+library(Seurat)
+# Define subset
+Idents(compare)<-compare$seurat_clusters
+Epithelial_cells<- subset(compare, idents=c("5","6","18","19","20","21","23","25","26","28","29","35","36","37"))
+```
+
+```{r}
+Epithelial_cells <- ScaleData(Epithelial_cells)
+tocalc<-as.data.frame(Epithelial_cells@assays$RNA@scale.data)
+
+#calculate mean scsubtype scores
+outdat <- matrix(0,nrow=ncol(sigdat),ncol=ncol(tocalc),dimnames=list(colnames(sigdat),colnames(tocalc)))
+for(i in 1:ncol(sigdat)){
+  # sigdat[i,!is.na(sigdat[i,])]->module
+  # row <- as.character(unlist(module))
+  row <- as.character(sigdat[,i])
+  row<-unique(row[row != ""])
+  genes<-which(rownames(tocalc) %in% row)
+  temp<-apply(tocalc[genes,],2,function(x){mean(as.numeric(x),na.rm=TRUE)})
+  outdat[i,]<-as.numeric(temp)
+
+}
+
+final<-outdat[which(rowSums(outdat,na.rm=TRUE)!=0),]
+final<-as.data.frame(final)
+is.num <- sapply(final, is.numeric);final[is.num] <- lapply(final[is.num], round, 4)
+finalm<-as.matrix(final)
+
+##Scaling scores function before calling the highest Call
+center_sweep <- function(x, row.w = rep(1, nrow(x))/nrow(x)) {
+  get_average <- function(v) sum(v * row.w)/sum(row.w)
+  average <- apply(x, 2, get_average)
+  sweep(x, 2, average)
+}
+
+##Obtaining the highest call
+finalmt<-as.data.frame(t(finalm))
+finalm.sweep.t<-center_sweep(finalmt)
+Finalnames<-colnames(finalm.sweep.t)[max.col(finalm.sweep.t,ties.method="first")]
+finalm.sweep.t$SCSubtypeCall <- Finalnames
+
+##Writing out output files (rownames remain the same for both)
+write.table(finalm.sweep.t, "Mydata_Scores.txt", sep="\t")
+write.table(Finalnames, "Mydata_CALLS.txt", sep="\t")
+```
+
+```{r}
+type<-as.data.frame(Epithelial_cells$type)
+finalm.sweep.t$sample<-type$`Epithelial_cells$type`
+write.table(finalm.sweep.t, "Mydata_Scores.txt", sep="\t")
+
+# 按 Group 分组，并计算每个分组内元素的频数
+grouped_df <- aggregate(SCSubtypeCall ~ sample, data = finalm.sweep.t, function(x) table(factor(x)))
+write.table(grouped_df, "grouped_df.txt", sep="\t")
+```
+
+
+
+
+
+
+
+```{r}
+library(RColorBrewer) # 调色板
+library(scales)       # 将y轴转化成百分比格式
+library(tidyverse)    # 作图
+library(ggplot2)
+score<-read.table("/home/spdx/yutc/scRNA/Code/step7_molecular_classification/Mydata_Scores.txt",header=TRUE,sep='\t')
+file_path= "/home/spdx/yutc/scRNA/Code/step7_molecular_classification/barplot.png"
+png(height=500, width=800, file=file_path)
+ggplot(score, aes(x =sample,fill = SCSubtypeCall)) +
+  geom_bar(width = 0.1, position = "fill") + # 百分比柱状图
+  scale_fill_brewer(palette = "Set1") +     # 调色板{RColorBrewer}
+  scale_y_continuous(labels = percent) +     # 修改y轴刻度为百分比
+  guides(fill=guide_legend(title = "SCsubtype"))+
+   labs(y = "Percentage of SC subtype",x=" ") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+dev.off ()
+```
+
+
+
+
+```{r}
+#################################
+# 亚型细分
+#################################
+
+Basal<- subset(finalm.sweep.t, SCSubtypeCall=="Basal_SC")
+Her2<- subset(finalm.sweep.t, SCSubtypeCall=="Her2E_SC")
+LumB<- subset(finalm.sweep.t, SCSubtypeCall=="LumB_SC")
+LumA<- subset(finalm.sweep.t, SCSubtypeCall=="LumA_SC")
+
+select_Basal<- tocalc[ ,colnames(tocalc) %in% rownames(Basal)]
+select_Her2<- tocalc[ ,colnames(tocalc) %in% rownames(Her2)]
+select_LumB<- tocalc[ ,colnames(tocalc) %in% rownames(LumB)]
+select_LumA<- tocalc[ ,colnames(tocalc) %in% rownames(LumA)]
+```
+
+```{r}
+select_Basal<-subset(x=Epithelial_cells, cells = colnames(select_Basal))
+select_Her2<-subset(x=Epithelial_cells, cells = colnames(select_Her2))
+select_LumB<-subset(x=Epithelial_cells, cells = colnames(select_LumB))
+select_LumA<-subset(x=Epithelial_cells, cells = colnames(select_LumA))
+```
+
+
+
+
+
+```{r}
+Basal_gene<-c("UBD","GREM1","PRF1","IL2RB","CD8A","IRF1","SULF1","FN1","POSTN")
+select_Basal<-t(select_Basal)
+Basal_matrix<- select_Basal[,colnames(select_Basal) %in% Basal_gene]
+```
+
+```{r}
+Her2_gene<-c("CD2","GZMK","PSMB9","TAP1","HLA-F","STAT1","CXCL9","CKAP2","CDH11","FBN1","COL5A1","AEBP1","HTRA1")
+select_Her2<-t(select_Her2)
+Her2_matrix<- select_Her2[,colnames(select_Her2) %in% Her2_gene]
+```
+
+```{r}
+LumB_gene<-c("RIOK3","PRR11","LSM1","BRF2","EIF4EBP1","HLA-DPB","HLA-DRA","C3","CSF1R")
+select_LumB<-t(select_LumB)
+LumB_matrix<- select_LumB[,colnames(select_LumB) %in% LumB_gene]
+```
+
+```{r}
+write.table(LumB_matrix,file="LumB_matrix.csv",row.names = FALSE,quote=FALSE,sep=",")
+Her2_matrix<-read.table("Her2_matrix.csv",header=TRUE,sep=',')
+Her2_matrix<-t(Her2_matrix)
+rownames(Her2_matrix)<-Her2_matrix[,1]
+Her2_matrix<- subset(Her2_matrix, select = -c(X))#删除第一列
+Her2_matrix<-as.matrix(Her2_matrix)
+```
+
+
+
+
+
+```{r}
+library(ConsensusClusterPlus)
+#对基因表达数据执行中位数中心化，以用于后续聚类
+dc <- sweep(Basal_matrix,1, apply(Basal_matrix,1,median))
+
+#使用函数ConsensusClusterPlus()执行聚类
+cluster <- ConsensusClusterPlus(
+  d = dc, 
+  maxK = 4, 
+  pItem = 0.8, 
+  pFeature = 1, 
+  clusterAlg = "hc", 
+  distance = "spearman", 
+  seed = 1234, 
+  innerLinkage = "complete", 
+  finalLinkage = "complete", 
+  corUse = "pairwise.complete.obs",
+  plot = 'png', 
+  title = "example"
+)
+```
+
+```{r}
+#查看样本所属的聚类群
+#cluster
+
+#例如，查看当划分3个聚类群时，各样本所属的聚类情况
+#其它聚类群的情况，更改数字即可
+cluster4<-cluster[[4]]$consensusClass 
+cluster4<-as.data.frame(cluster4)
+```
+
+```{r}
+library(pheatmap)
+pheatmap(Basal_matrix,show_rownames = T,show_colnames=F,annotation_col=cluster4,cluster_cols=F,cluster_rows=F)
+```
+
+

@@ -1,0 +1,307 @@
+---
+title: "Enrichment analysis"
+output: html_document
+date: "2023-03-29"
+---
+```{r}
+#1、加载包
+library(AnnotationDbi)
+library(org.Hs.eg.db)#基因注释包
+library(clusterProfiler)#富集包
+library(dplyr)
+library(ggplot2)#画图包
+
+#2、基因id转换，kegg和go富集用的ID类型是ENTREZID）
+gene.df <- bitr(res_tbl$gene,fromType="SYMBOL",toType="ENTREZID", OrgDb = org.Hs.eg.db)#TCGA数据框如果没有进行基因注释，那么fromType应该是Ensembl，各种ID之间可以互相转换,toType可以是一个字符串，也可以是一个向量，看自己需求          
+gene <- gene.df$ENTREZID
+
+
+#3、GO富集
+##CC表示细胞组分，MF表示分子功能，BP表示生物学过程，ALL表示同时富集三种过程，选自己需要的,我一般是做BP,MF,CC这3组再合并成一个数据框，方便后续摘取部分通路绘图。
+ego_ALL <- enrichGO(gene = gene,#我们上面定义了
+                   OrgDb=org.Hs.eg.db,
+                   keyType = "ENTREZID",
+                   ont = "ALL",#富集的GO类型
+                   pAdjustMethod = "BH",#这个不用管，一般都用的BH
+                   minGSSize = 1,
+                   pvalueCutoff = 0.01,#P值可以取0.05
+                   qvalueCutoff = 0.05,
+                   readable = TRUE)
+                   
+ego_CC <- enrichGO(gene = gene,
+                   OrgDb=org.Hs.eg.db,
+                   keyType = "ENTREZID",
+                   ont = "CC",
+                   pAdjustMethod = "BH",
+                   minGSSize = 1,
+                   pvalueCutoff = 0.01,
+                   qvalueCutoff = 0.05,
+                   readable = TRUE)
+
+ego_BP <- enrichGO(gene = gene,
+                   OrgDb=org.Hs.eg.db,
+                   keyType = "ENTREZID",
+                   ont = "BP",
+                   pAdjustMethod = "BH",
+                   minGSSize = 1,
+                   pvalueCutoff = 0.01,
+                   qvalueCutoff = 0.05,
+                   readable = TRUE)
+
+ego_MF <- enrichGO(gene = gene,
+                   OrgDb=org.Hs.eg.db,
+                   keyType = "ENTREZID",
+                   ont = "MF",
+                   pAdjustMethod = "BH",
+                   minGSSize = 1,
+                   pvalueCutoff = 0.01,
+                   qvalueCutoff = 0.05,
+                   readable = TRUE)
+
+#4、将结果保存到当前路径
+ego_ALL <- as.data.frame(ego_ALL)
+ego_result_BP <- as.data.frame(ego_BP)
+ego_result_CC <- as.data.frame(ego_CC)
+ego_result_MF <- as.data.frame(ego_MF)
+ego <- rbind(ego_result_BP,ego_result_CC,ego_result_MF)#或者这样也能得到ego_ALL一样的结果
+write.csv(ego_ALL,file = "ego_ALL.csv",row.names = T)
+write.csv(ego_result_BP,file = "ego_result_BP.csv",row.names = T)
+write.csv(ego_result_CC,file = "ego_result_CC.csv",row.names = T)
+write.csv(ego_result_MF,file = "ego_result_MF.csv",row.names = T)
+write.csv(ego,file = "ego.csv",row.names = T)
+
+#5、但是有时候我们富集到的通路太多了，不方便绘制图片，可以选择部分绘制，这时候跳过第4步，来到第5步
+display_number = c(22, 22, 22)#这三个数字分别代表选取的BP、CC、MF的通路条数，这个自己设置就行了
+ego_result_BP <- as.data.frame(ego_BP)[1:display_number[1], ]
+ego_result_CC <- as.data.frame(ego_CC)[1:display_number[2], ]
+ego_result_MF <- as.data.frame(ego_MF)[1:display_number[3], ]
+
+##将以上我们摘取的部分通路重新组合成数据框
+go_enrich_df <- data.frame(
+ID=c(ego_result_BP$ID, ego_result_CC$ID, ego_result_MF$ID),                         Description=c(ego_result_BP$Description,ego_result_CC$Description,ego_result_MF$Description),
+GeneNumber=c(ego_result_BP$Count, ego_result_CC$Count, ego_result_MF$Count),
+type=factor(c(rep("biological process", display_number[1]), 
+              rep("cellular component", display_number[2]),
+              rep("molecular function", display_number[3])), 
+              levels=c("biological process", "cellular component","molecular function" )))
+
+##通路的名字太长了，我选取了通路的前五个单词作为通路的名字
+for(i in 1:nrow(go_enrich_df)){
+  description_splite=strsplit(go_enrich_df$Description[i],split = " ")
+  description_collapse=paste(description_splite[[1]][1:5],collapse = " ") #这里的5就是指5个单词的意思，可以自己更改
+  go_enrich_df$Description[i]=description_collapse
+  go_enrich_df$Description=gsub(pattern = "NA","",go_enrich_df$Description)
+}
+
+##开始绘制GO柱状图
+  ###横着的柱状图
+go_enrich_df$type_order=factor(rev(as.integer(rownames(go_enrich_df))),labels=rev(go_enrich_df$Description))#这一步是必须的，为了让柱子按顺序显示，不至于很乱
+COLS <- c("#66C3A5", "#8DA1CB", "#FD8D62")#设定颜色
+
+GO<-ggplot(data=go_enrich_df, aes(x=type_order,y=GeneNumber, fill=type)) + #横纵轴取值
+  geom_bar(stat="identity", width=0.8) + #柱状图的宽度，可以自己设置
+  scale_fill_manual(values = COLS) + ###颜色
+  coord_flip() + ##这一步是让柱状图横过来，不加的话柱状图是竖着的
+  xlab("GO term") + 
+  ylab("Gene_Number") + 
+  labs(title = "The Most Enriched GO Terms")+
+  theme_bw()
+ggsave("GO.png",GO,width = 10, height = 10, dpi = 150)
+  ###竖着的柱状图 
+go_enrich_df$type_order=factor(rev(as.integer(rownames(go_enrich_df))),labels=rev(go_enrich_df$Description))
+COLS <- c("#66C3A5", "#8DA1CB", "#FD8D62")
+GO<-ggplot(data=go_enrich_df, aes(x=type_order,y=GeneNumber, fill=type)) + 
+  geom_bar(stat="identity", width=0.8) + 
+  scale_fill_manual(values = COLS) + 
+  theme_bw() + 
+  xlab("GO term") + 
+  ylab("Num of Genes") + 
+  labs(title = "The Most Enriched GO Terms")+ 
+  theme(axis.text.x=element_text(face = "bold", color="gray50",angle = 70,vjust = 1, hjust = 1 ))#angle是坐标轴字体倾斜的角度，可以自己设置
+ggsave("GO.png",GO,width = 10, height = 10, dpi = 150)
+```
+
+```{r}
+# 加载物种包
+# 根据物种来指定
+OrgDb = "org.Hs.eg.db" 
+
+# 基因Symbol转化为基因ENTREZID
+gene_convert <- bitr(res_tbl$gene, fromType = 'SYMBOL', toType = 'ENTREZID', OrgDb = OrgDb)
+
+# 合并两个表格
+markers = res_tbl%>%left_join(gene_convert,by=c("gene"="SYMBOL"))
+# GO
+# posiible value: BP, CC, MF, all
+ont = "BP" 
+
+go.results <- enrichGO(markers$ENTREZID, keyType="ENTREZID",ont="BP",OrgD = OrgDb, readable = TRUE)
+go.results
+go<-dotplot(go.results)
+go<-barplot(go.results, showCategory = 10)
+go<-emapplot(pairwise_termsim(go.results))
+ggsave("go.png",go,width = 10, height = 10, dpi = 150)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+#1、KEGG富集
+kk <- enrichKEGG(gene = gene,keyType = "kegg",organism= "human", qvalueCutoff = 0.05, pvalueCutoff=0.05)
+
+#2、可视化
+  ###柱状图
+hh <- as.data.frame(kk)#自己记得保存结果哈！
+rownames(hh) <- 1:nrow(hh)
+hh$order=factor(rev(as.integer(rownames(hh))),labels = rev(hh$Description))
+KEGG<-ggplot(hh,aes(y=order,x=Count,fill=p.adjust))+
+  geom_bar(stat = "identity",width=0.7)+####柱子宽度
+  #coord_flip()+##颠倒横纵轴
+  scale_fill_gradient(low = "red",high ="blue" )+#颜色自己可以换
+  labs(title = "KEGG Pathways Enrichment",
+       x = "Gene numbers", 
+       y = "Pathways")+
+  theme(axis.title.x = element_text(face = "bold",size = 16),
+        axis.title.y = element_text(face = "bold",size = 16),
+        legend.title = element_text(face = "bold",size = 16))+
+  theme_bw()
+  
+ggsave("KEGG.png",KEGG,width = 10, height = 20, dpi = 150)
+
+  ###气泡图
+hh <- as.data.frame(kk)
+rownames(hh) <- 1:nrow(hh)
+hh$order=factor(rev(as.integer(rownames(hh))),labels = rev(hh$Description))
+KEGG<-ggplot(hh,aes(y=order,x=Count))+geom_point(aes(size=Count,color=-1*p.adjust))+scale_color_gradient(low="green",high = "red")+labs(color=expression(p.adjust,size="Count"), x="Gene Number",y="Pathways",title="KEGG Pathway Enrichment")+theme_bw()
+ggsave("KEGG.png",KEGG,width = 10, height = 20, dpi = 150)
+```
+
+```{r}
+organism = "hsa" # 对应KEGG数据库里的物种缩写
+kegg.results <- enrichKEGG(markers$ENTREZID, organism = organism)
+kegg.results
+kegg.results <- setReadable(kegg.results, OrgDb = OrgDb, keyType='ENTREZID')
+
+kegg<-dotplot(kegg.results)
+kegg<-barplot(kegg.results, showCategory = 10)
+ggsave("kegg.png",kegg,width = 10, height = 10, dpi = 150)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+###########################
+# markers for GSEA
+###########################
+## 至少多少比例的细胞表达这个基因，过滤一些只在极少数细胞中有表达的基因
+min.pct = 0.01 
+## 过滤掉在两组中几乎没有差异的基因
+logfc.threshold = 0.01 
+Idents(compare)<-"celltype"
+markers.for.gsea <- FindMarkers(compare, ident.1 = "T cells", ident.2 = "B cells", min.pct = min.pct, logfc.threshold=logfc.threshold)
+# GSEA 要求输入的是一个排好序的列表
+Markers_genelist <- markers.for.gsea$avg_log2FC
+names(Markers_genelist)= rownames(markers.for.gsea)
+Markers_genelist <- sort(Markers_genelist, decreasing = T)
+```
+
+```{r}
+m_df = msigdbr(species = 'Homo sapiens' , category = "C2")
+mf_df= m_df %>% dplyr::select(gs_name,gene_symbol)
+
+gsea.results <- GSEA(Markers_genelist, TERM2GENE = mf_df)
+gsea.results
+
+gseaplot(gsea.results, gsea.results@result$ID[3])
+```
+
+
+
+
+
+```{r}
+### 对 MsigDB中的全部基因集 做GSEA分析。
+# http://www.bio-info-trainee.com/2105.html
+# http://www.bio-info-trainee.com/2102.html 
+# https://www.gsea-msigdb.org/gsea/msigdb
+# https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp
+geneList= markers.for.gsea$avg_log2FC 
+names(geneList)= toupper(rownames(markers.for.gsea))
+geneList=sort(geneList,decreasing = T)
+head(geneList)
+library(ggplot2)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+#选择gmt文件（MigDB中的全部基因集）
+gmtfile ='/home/spdx/yutc/tiancy/scRNA/Raw_Data/msigdb.v2023.1.Hs.symbols.gmt'
+# 31120 个基因集
+#GSEA分析
+library(GSEABase) # BiocManager::install('GSEABase')
+geneset <- read.gmt(gmtfile)  
+length(unique(geneset$term))
+egmt <- GSEA(geneList, TERM2GENE=geneset, minGSSize = 1,pvalueCutoff = 0.99,verbose=FALSE)
+head(egmt)
+egmt@result 
+gsea_results_df <- egmt@result 
+rownames(gsea_results_df)
+write.csv(gsea_results_df,file = 'gsea_results_df.csv')
+library(enrichplot)
+gseaplot2(egmt,geneSetID = 'HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION',pvalue_table=T)
+gseaplot2(egmt,geneSetID = 'HALLMARK_MTORC1_SIGNALING',pvalue_table=T)
+```
+
+```{r}
+# 这里找不到显著下调的通路，可以选择调整阈值，或者其它。
+down_kegg<-gsea_results_df[gsea_results_df$pvalue<0.05 & gsea_results_df$enrichmentScore < -0.3,];down_kegg$group=-1
+up_kegg<-gsea_results_df[gsea_results_df$pvalue<0.05 & gsea_results_df$enrichmentScore > 0.3,];up_kegg$group=1
+
+
+pro='test'
+library(enrichplot) 
+lapply(1:nrow(down_kegg), function(i){ 
+  gseaplot2(egmt,down_kegg$ID[i],
+            title=down_kegg$Description[i],pvalue_table = T)
+  ggsave(paste0(pro,'_down_kegg_',
+                gsub('/','-',down_kegg$Description[i])
+                ,'.pdf'))
+})
+lapply(1:nrow(up_kegg), function(i){ 
+  gseaplot2(egmt,up_kegg$ID[i],
+            title=up_kegg$Description[i],pvalue_table = T)
+  ggsave(paste0(pro,'_up_kegg_',
+                gsub('/','-',up_kegg$Description[i]),
+                '.pdf'))
+})
+```
+
+
