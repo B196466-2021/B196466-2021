@@ -1,0 +1,178 @@
+---
+title: "Seurat"
+output: html_document
+date: "2023-03-08"
+---
+```{r}
+# Load libraries
+library(Seurat)
+library(Matrix)
+library(SeuratData)
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+library(scater)
+library(SeuratDisk)
+library(SingleCellExperiment)
+library(scDblFinder)
+library(BiocManager)
+library(celldex)
+library(cowplot)
+library(DoubletFinder)
+library(msigdbr)
+library(fgsea)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+library(stringr)
+library(enrichplot)
+library(GSVA)
+library(pathview)
+library(DOSE)
+library(enrichR)
+library(rlang)
+```
+
+```{r}
+####################################
+## doubletFinder (before QC)
+####################################
+compare = ScaleData(compare,verbose =F)
+compare = RunPCA(compare, verbose = F, npcs = 20)
+compare = RunUMAP(compare, dims = 1:20, reduction = "pca",verbose = F)
+compare = FindNeighbors(compare, dims = 1:20,verbose = FALSE)
+compare = FindClusters(compare, resolution = 0.8, verbose = FALSE)
+
+## 寻找最优pK值
+sweep.res.list <- paramSweep_v3(compare, PCs = 1:20, sct = T)
+sweep.stats <- summarizeSweep(sweep.res.list, GT = FALSE)  
+bcmvn <- find.pK(sweep.stats)
+pK_bcmvn <- bcmvn$pK[which.max(bcmvn$BCmetric)] %>% as.character() %>% as.numeric()
+
+## 排除不能检出的同源doublets，优化期望的doublets数量
+DoubletRate = ncol(compare)*8*1e-6                     
+homotypic.prop <- modelHomotypic(compare$seurat_clusters)   # 最好提供celltype
+nExp_poi <- round(DoubletRate*ncol(compare)) 
+nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
+
+## 使用确定好的参数鉴定doublets
+compare<- doubletFinder_v3(compare, PCs = 1:20, pN = 0.25, pK = pK_bcmvn,nExp = nExp_poi.adj, reuse.pANN = F, sct = T)
+
+# Predict doublet
+DF.name = colnames(compare@meta.data)[grepl("DF.classification", colnames(compare@meta.data))]
+cowplot::plot_grid(ncol = 2, DimPlot(compare, group.by = "orig.ident") + NoAxes(),DimPlot(compare, group.by = DF.name) + NoAxes())
+
+# Remove doublet
+compare = compare[, compare@meta.data[, DF.name] == "Singlet"]
+dim(compare)
+# Remove data
+rm(sweep.res.list,sweep.stats,bcmvn)
+gc()
+```
+
+
+
+
+
+
+
+```{r}
+#####################################
+## Quality control ##################
+#####################################
+compare[["percent.mt"]] <- PercentageFeatureSet(compare, pattern = "^MT")
+compare[["percent.rb"]] <- PercentageFeatureSet(compare, pattern = "^RP[SL]")
+# Visualize QC metrics as a violin plot
+VlnPlot(compare, features = c("nFeature_RNA","nCount_RNA","percent.mt","percent.rb"),group.by = "orig.ident",ncol = 4,pt.size = 0.1) 
+#VlnPlot(compare, features = "nFeature_RNA",group.by = "kind",split.by = "orig.ident",raster=FALSE)
+#VlnPlot(compare, features = "nCount_RNA",group.by = "kind",split.by = "orig.ident",raster=FALSE)
+#ggsave("VlnPlot.png",VlnPlot,width = 15, height = 10, dpi = 150)
+```
+
+
+```{r}
+# Scatter Plot
+Scatter1<-FeatureScatter(compare, feature1 = "nCount_RNA", feature2 = "percent.mt",group.by = "orig.ident", pt.size = 0.5)
+Scatter1
+#ggsave("Scatter1.png",Scatter1)
+Scatter2<-FeatureScatter(compare, feature1 = "nCount_RNA", feature2 = "nFeature_RNA",group.by = "orig.ident", pt.size = 0.5)
+Scatter2
+#ggsave("Scatter2.png",Scatter2)
+Scatter3<-FeatureScatter(compare, feature1 = "nCount_RNA", feature2 = "percent.rb",group.by = "orig.ident", pt.size = 0.5)
+Scatter3
+#ggsave("Scatter3.png",Scatter3)
+Scatter4<-FeatureScatter(compare, feature1 = "percent.rb", feature2 = "percent.mt",group.by = "orig.ident", pt.size = 0.5)
+Scatter4
+#ggsave("Scatter4.png",Scatter4)
+rm(Scatter1,Scatter2,Scatter3,Scatter4)
+gc()
+```
+
+```{r}
+# Detection-based filtering
+# consider cells with at least 200 detected genes and genes need to be expressed in at least 3 cells
+selected_c <- WhichCells(compare, expression =  nFeature_RNA >200)
+selected_f <- rownames(compare)[Matrix::rowSums(compare) > 3]
+compare <- subset(compare, features = selected_f, cells = selected_c)
+compare <- subset(compare, subset = nFeature_RNA > 200 & nCount_RNA > 250 & percent.mt < 20)
+
+# Plot filtered QC
+VlnPlot(compare, features = c("nFeature_RNA","nCount_RNA","percent.mt","percent.rb"),group.by = "orig.ident",ncol = 4,pt.size = 0.1) 
+```
+
+
+
+```{r}
+#######################################
+# normalize data and find feature genes
+#######################################
+compare <- NormalizeData(compare)
+compare <- FindVariableFeatures(compare, verbose = F,selection.method = "vst", nfeatures = 2000)
+VariableFeaturePlot(compare)
+```
+
+
+```{r}
+# Run the standard workflow for visualization and clustering
+# 所有基因 处理 平均值为0 标准差为1  高表达基因和低表达同等对待  标准化
+# scaladata cell cycle 如果有差异，就只能挑选你想要的
+#compare <- ScaleData(compare,verbose = F, vars.to.regress = c("nFeature_RNA", "percent.mt"))
+DefaultAssay(compare) <- "integrated"
+compare <- ScaleData(compare,verbose = F)
+compare <- RunPCA(compare,npcs =20, verbose = FALSE)
+# UMAP TSNE 20维度再将维度2维度 UMAP细胞多，快 全局精准  PC1 PC2
+compare <- RunUMAP(compare, reduction = "pca", dims = 1:20,verbose = FALSE, seed.use = 42)
+#pc值20一般，样本数多就大，样本数少就小，看曲线
+#DimHeatmap(compare, dims = 1:20, cells = 100, balanced = TRUE)
+ElbowPlot(compare)
+```
+
+```{r}
+#kmean =2 两个聚类
+#监督（公共数据），无监督（自身）
+compare <- FindNeighbors(compare, dims = 1:20,verbose = FALSE)
+compare <- FindClusters(compare, resolution = 0.8, verbose = FALSE)
+#table(compare@meta.data$RNA_snn_res.1.0)
+#UMAP
+compare <- RunUMAP(compare, dims = 1:20, do.fast = TRUE)
+DimPlot(compare,reduction = "umap",label=T)
+#table(compare@meta.data$seurat_clusters,compare@meta.data$orig.ident)
+#saveRDS(compare, file="compare.Rds")
+#data <- readRDS("compare.rds")
+```
+
+```{r}
+# TSNE
+compare <- RunTSNE(compare, reduction = "pca", dims = 1:20, perplexity = 30, max_iter = 1000,theta = 0.5, eta = 200, num_threads = 0)
+DimPlot(compare, reduction = "tsne")
+#ggsave("tsne.png",tsne)
+#DimPlot(compare, reduction = "pca")
+#DimPlot(compare, reduction = "pca",group.by = "orig.ident")
+#DimPlot(compare, reduction = "pca",group.by = "seurat_clusters")
+
+# 确定需要在seurat_integrated@meta.data中绘制的指标
+metrics <-  c("nFeature_RNA","nCount_RNA")
+FeaturePlot(compare, reduction = "umap", features = metrics,pt.size = 0.4, sort.cell = TRUE,min.cutoff = 'q10')
+```
+
+
+
