@@ -80,12 +80,12 @@ GSM7475154_hbca_n10.seu$type <- "GSM7475154"
 
 
 ```{r}
-seu.list <- list(GSM7475112_hbca_v01.seu, GSM7475113_hbca_v02.seu, GSM7475114_hbca_v03.seu, GSM7475115_hbca_v04.seu,GSM7475116_hbca_v05.seu,GSM7475117_hbca_v06.seu,GSM7475118_hbca_v07.seu,GSM7475119_hbca_v08.seu,GSM7475120_hbca_v09.seu,GSM7475121_hbca_v10.seu)
+seu.list <- list(GSM7475112_hbca_v01.seu, GSM7475113_hbca_v02.seu, GSM7475114_hbca_v03.seu, GSM7475115_hbca_v04.seu,GSM7475116_hbca_v05.seu,GSM7475117_hbca_v06.seu,GSM7475118_hbca_v07.seu,GSM7475119_hbca_v08.seu,GSM7475120_hbca_v09.seu,GSM7475121_hbca_v10.seu,GSM7475145_hbca_n01.seu,GSM7475146_hbca_n02.seu,GSM7475147_hbca_n03.seu,GSM7475148_hbca_n04.seu,GSM7475149_hbca_n05.seu,GSM7475150_hbca_n06.seu,GSM7475151_hbca_n07.seu,GSM7475152_hbca_n08.seu,GSM7475153_hbca_n09.seu,GSM7475154_hbca_n10.seu)
 
 # normalize data and find feature genes
 seu.list <- lapply(X = seu.list, FUN = function(x) {
   x <- NormalizeData(x) # normalize data
-  x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 10000) # find 2k feature genes
+  x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
 })
 
 # select features that are repeatedly variable across datasets for integration
@@ -98,6 +98,6 @@ data.anchors <- FindIntegrationAnchors(object.list = seu.list,
                                        verbose=FALSE)
 
 # integrate data using the identified anchors
-data.combined <- IntegrateData(anchorset = data.anchors, verbose=FALSE)
+compare <- IntegrateData(anchorset = data.anchors, verbose=FALSE)
 ```
 

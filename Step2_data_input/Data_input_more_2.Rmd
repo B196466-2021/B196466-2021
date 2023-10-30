@@ -1,0 +1,231 @@
+---
+title: "Data_input_0"
+output: html_document
+date: "2023-04-04"
+---
+
+```{r}
+###########################
+#找到所有目录
+###########################
+# 指定目录路径
+#dir_path <- "/home/spdx/scRNA-seq/scRNA/GSE176078_RAW"
+
+# 获取目录下的所有文件夹
+#folders <- list.dirs(dir_path, recursive = FALSE)
+
+# 遍历每个文件夹，获取其中的文件路径
+#for (folder in folders) {
+  # 获取文件夹中的所有文件
+  #files <- list.files(folder, full.names = TRUE)
+  
+  # 输出每个文件的完整路径
+  #print(files)
+#}
+
+# 指定目录路径
+dir_path <- "/home/spdx/scRNA-seq/scRNA/GSE176078_RAW"
+
+# 获取目录下的所有文件夹
+folders <- list.dirs(dir_path, recursive = FALSE)
+
+# 输出每个文件夹的路径
+folder_paths<-lapply(folders, function(x) {
+  print(x)
+})
+
+###############################
+#修改文件名
+###############################
+# 获取每个文件夹中的文件路径
+
+# 循环遍历每个文件夹中的文件
+for (path in folder_paths) {
+  # 获取文件夹中的所有文件
+  files <- list.files(path)
+  
+  # 将文件夹路径添加到文件名之前
+  files <- paste(path, files, sep = "/")
+  
+  # 替换文件名中的"_old"为"_new"
+  #new_files <- gsub("count_matrix_barcodes", "barcodes", files)
+  
+  #new_files <- gsub("count_matrix_genes", "features", files)
+  
+  new_files <- gsub("count_matrix_sparse", "matrix", files)
+  
+  
+  # 使用file.rename()函数重命名文件
+  file.rename(files, new_files)
+}
+
+```
+
+```{r}
+library(Seurat)
+data1 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354513_CID3586")
+GSM5354513_CID3586 <- CreateSeuratObject(counts = data1, project = "GSM5354513_CID3586")
+GSM5354513_CID3586$type <- "GSM5354513_CID3586"
+
+data2 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354515_CID3921")
+GSM5354515_CID3921 <- CreateSeuratObject(counts = data2, project = "GSM5354515_CID3921")
+GSM5354515_CID3921$type <- "GSM5354515_CID3921"
+
+data3 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354514_CID3838")
+GSM5354514_CID3838 <- CreateSeuratObject(counts = data3, project = "GSM5354514_CID3838")
+GSM5354514_CID3838$type <- "GSM5354514_CID3838"
+
+data4 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354516_CID3941")
+GSM5354516_CID3941 <- CreateSeuratObject(counts = data4, project = "GSM5354516_CID3941")
+GSM5354516_CID3941$type <- "GSM5354516_CID3941"
+
+data5 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354517_CID3946")
+GSM5354517_CID3946 <- CreateSeuratObject(counts = data5, project = "GSM5354517_CID3946")
+GSM5354517_CID3946$type <- "GSM5354517_CID3946"
+
+data6 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354518_CID3948")
+GSM5354518_CID3948 <- CreateSeuratObject(counts = data6, project = "GSM5354518_CID3948")
+GSM5354518_CID3948$type <- "GSM5354518_CID3948"
+
+data7 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354519_CID3963")
+GSM5354519_CID3963 <- CreateSeuratObject(counts = data7, project = "GSM5354519_CID3963")
+GSM5354519_CID3963$type <- "GSM5354519_CID3963"
+
+data8 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354520_CID4040")
+GSM5354520_CID4040 <- CreateSeuratObject(counts = data8, project = "GSM5354520_CID4040")
+GSM5354520_CID4040$type <- "GSM5354520_CID4040"
+
+data9 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354521_CID4066")
+GSM5354521_CID4066 <- CreateSeuratObject(counts = data9, project = "GSM5354521_CID4066")
+GSM5354521_CID4066$type <- "GSM5354521_CID4066"
+
+data10 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354522_CID4067")
+GSM5354522_CID4067 <- CreateSeuratObject(counts = data10, project = "GSM5354522_CID4067")
+GSM5354522_CID4067$type <- "GSM5354522_CID4067"
+
+data11 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354523_CID4290A")
+GSM5354523_CID4290A <- CreateSeuratObject(counts = data11, project = "GSM5354523_CID4290A")
+GSM5354523_CID4290A$type <- "GSM5354523_CID4290A"
+
+data12 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354524_CID4398")
+GSM5354524_CID4398 <- CreateSeuratObject(counts = data12, project = "GSM5354524_CID4398")
+GSM5354524_CID4398$type <- "GSM5354524_CID4398"
+
+data13 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354525_CID44041")
+GSM5354525_CID44041 <- CreateSeuratObject(counts = data13, project = "GSM5354525_CID44041")
+GSM5354525_CID44041$type <- "GSM5354525_CID44041"
+
+data14 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354526_CID4461")
+GSM5354526_CID4461 <- CreateSeuratObject(counts = data14,project = "GSM5354526_CID4461")
+GSM5354526_CID4461$type <- "GSM5354526_CID4461"
+
+data15 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354527_CID4463")
+GSM5354527_CID4463 <- CreateSeuratObject(counts = data15, project = "GSM5354527_CID4463")
+GSM5354527_CID4463$type <- "GSM5354527_CID4463"
+
+data16 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354528_CID4465")
+GSM5354528_CID4465 <- CreateSeuratObject(counts = data16, project = "GSM5354528_CID4465")
+GSM5354528_CID4465$type <- "GSM5354528_CID4465"
+
+data17 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354529_CID4471")
+GSM5354529_CID4471 <- CreateSeuratObject(counts = data17, project = "GSM5354529_CID4471")
+GSM5354529_CID4471$type <- "GSM5354529_CID4471"
+
+data18 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354530_CID4495")
+GSM5354530_CID4495 <- CreateSeuratObject(counts = data18, project = "GSM5354530_CID4495")
+GSM5354530_CID4495$type <- "GSM5354530_CID4495"
+
+data19 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354531_CID44971")
+GSM5354531_CID44971 <- CreateSeuratObject(counts = data19, project = "GSM5354531_CID44971")
+GSM5354531_CID44971$type <- "GSM5354531_CID44971"
+
+data20 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354532_CID44991")
+GSM5354532_CID44991 <- CreateSeuratObject(counts = data20, project = "GSM5354532_CID44991")
+GSM5354532_CID44991$type <- "GSM5354532_CID44991"
+
+data21 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354533_CID4513")
+GSM5354533_CID4513 <- CreateSeuratObject(counts = data21, project = "GSM5354533_CID4513")
+GSM5354533_CID4513$type <- "GSM5354533_CID4513"
+
+data22 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354534_CID4515")
+GSM5354534_CID4515 <- CreateSeuratObject(counts = data22, project = "GSM5354534_CID4515")
+GSM5354534_CID4515$type <- "GSM5354534_CID4515"
+
+data23 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354535_CID45171")
+GSM5354535_CID45171 <- CreateSeuratObject(counts = data23, project = "GSM5354535_CID45171")
+GSM5354535_CID45171$type <- "GSM5354535_CID45171"
+
+data24 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354536_CID4523")
+GSM5354536_CID4523 <- CreateSeuratObject(counts = data24, project = "GSM5354536_CID4523")
+GSM5354536_CID4523$type <- "GSM5354536_CID4523"
+
+data25 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354537_CID4530N")
+GSM5354537_CID4530N <- CreateSeuratObject(counts = data25, project = "GSM5354537_CID4530N")
+GSM5354537_CID4530N$type <- "GSM5354537_CID4530N"
+
+data26 <- Read10X(data.dir ="/home/spdx/yutc/scRNA/Raw_Data/GSE176078_RAW/GSM5354538_CID4535")
+GSM5354538_CID4535 <- CreateSeuratObject(counts = data26, project = "GSM5354538_CID4535")
+GSM5354538_CID4535$type <- "GSM5354538_CID4535"
+```
+
+
+
+```{r}
+# create a list to include all these four Seurat obj
+seu.list <- list(GSM5354513_CID3586, GSM5354515_CID3921, GSM5354514_CID3838, GSM5354516_CID3941,GSM5354517_CID3946,GSM5354518_CID3948,GSM5354519_CID3963,GSM5354521_CID4066,GSM5354522_CID4067,GSM5354523_CID4290A,GSM5354524_CID4398,GSM5354525_CID44041,GSM5354526_CID4461,GSM5354527_CID4463,GSM5354528_CID4465,GSM5354529_CID4471,GSM5354530_CID4495,GSM5354531_CID44971,GSM5354532_CID44991,GSM5354533_CID4513,GSM5354534_CID4515,GSM5354535_CID45171,GSM5354536_CID4523,GSM5354537_CID4530N,GSM5354538_CID4535,GSM5354520_CID4040)
+
+#seu.list <- list(GSM4626850,GSM4626851,GSM4626852,GSM5311807,GSM5311808,GSM5311809,GSM5311811,GSM5311810,GSM5311812,GSM5686673,GSM5699225,GSM5956093,GSM5956094,GSM5956095)
+
+# normalize data and find feature genes
+seu.list <- lapply(X = seu.list, FUN = function(x) {
+  x[["percent.mt"]] <- PercentageFeatureSet(x, pattern = "^MT")
+  x[["percent.rb"]] <- PercentageFeatureSet(x, pattern = "^RP[SL]")
+  #selected_c <- WhichCells(x, expression =  nFeature_RNA >200)
+  #selected_f <- rownames(x)[Matrix::rowSums(x) > 3]
+  #x <- subset(x, features = selected_f, cells = selected_c)
+  #x <- subset(x, subset = nFeature_RNA > 200 & nCount_RNA > 250 & percent.mt < 20)
+  x <- NormalizeData(x) # normalize data
+  x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000) # find 2k feature genes
+})
+
+# select features that are repeatedly variable across datasets for integration
+features <- SelectIntegrationFeatures(object.list = seu.list)
+
+# find anchors in CCA-reduced space (CCA - canonical correlation analysis)
+data.anchors <- FindIntegrationAnchors(object.list = seu.list, 
+                                       anchor.features = features,
+                                       reduction = "cca", 
+                                       verbose=FALSE)
+
+# integrate data using the identified anchors
+compare <- IntegrateData(anchorset = data.anchors, verbose=FALSE)
+
+#rm(data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,GSM5354513_CID3586, GSM5354515_CID3921, GSM5354514_CID3838, GSM5354516_CID3941,GSM5354517_CID3946,GSM5354518_CID3948,GSM5354519_CID3963,GSM5354520_CID4040,GSM5354521_CID4066,GSM5354522_CID4067,data.anchors,seu.list)
+#gc()
+```
+
+```{r}
+# Merge dataset into one single seurat object
+#pre<-merge(result1, c(result3,result5,result7), add.cell.ids = c("602791_Pre_BCG_DC", "303215_Pre_BCG_DC", "402740_Pre_BCG_DC","Pre_BCG_Lymph_node"))
+#post<-merge(result2, c(result4,result6,result8), add.cell.ids = c("602791_Post_BCG_DC","303215_Post_BCG_DC","402740_Post_BCG_DC","Post_BCG_Lymph_node"))
+#pre$type <- "Pre_BCG"
+#post$type <- "Post_BCG"
+#compare<-merge(pre, c(post), add.cell.ids = c("Pre_BCG", "Post_BCG"))
+
+
+#anchors
+#good anchors
+#CCA canonical correlation analysis (两个数据) SCTransform | feature selection 2k | common 2k
+#anchor scoring 权重 分数最高 KNN 
+# Integrate datasets
+#compare <- SplitObject(compare, split.by = "orig.ident")
+
+#features <- SelectIntegrationFeatures(object.list = compare)
+#RPCA 基于样本过多 20以内
+#compare.anchors <- FindIntegrationAnchors(object.list = compare, anchor.features = features,reduction = "rpca",verbose=FALSE)
+#compare.anchors <- FindIntegrationAnchors(object.list = compare, anchor.features = features,reduction = "cca"，verbose=FALSE)
+#compare <- IntegrateData(anchorset = compare.anchors,verbose=FALSE)
+# assay放到整合后
+#DefaultAssay(compare) <- "integrated"
+#annotation后再整个一遍
+```

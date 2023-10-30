@@ -1,0 +1,25 @@
+---
+title: "Data_input_one_0"
+output: html_document
+date: "2023-04-19"
+---
+
+```{r}
+#############################
+#Single Sample #############
+#############################
+library(Seurat)
+data_dir <- "/home/spdx/yutc/Colorectal_cancer/Human Colon Cancer Atlas (c295)" # Directory containing the 10x data
+type <- "c295" # Type of sample
+
+data1 <- Read10X(data.dir =data_dir) #load data
+result1 <- CreateSeuratObject(counts = data1, project = type)
+result1$type <- type # Set type
+#remove data 
+compare<-result1
+rm(data1,result1)
+gc()
+compare = NormalizeData(compare)
+compare = FindVariableFeatures(compare, selection.method = "vst", nfeatures = 2000)
+```
+
