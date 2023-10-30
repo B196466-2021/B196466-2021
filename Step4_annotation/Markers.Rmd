@@ -1,0 +1,190 @@
+---
+title: "Markers"
+output: html_document
+date: "2023-05-18"
+---
+
+```{r}
+#MCA Macrophage
+#Macro <-c("Chil3","Ccl9","S100a4","Lyz2","Thbs1","Ms4a4c","F10","Ly6c2","Gda","Lgals3")
+
+#MCA Kupffer_cell
+#KC <- c("Vsig4","Cd5l","Fcna","Cfp","C1qc","Clec4f","Ctsc","Adgre1","Fabp7","C1qa")
+
+#MCA Endothelial_cell
+#np <- c("Cxcl10","Clec4g","Igfbp7","Adamts1","Plpp3","Iigp1","Kdr","Nrp1","Cyp4b1","Socs3")
+
+#MCA DC
+#DC <- c("Cst3","Ccr7","H2-Eb1","Ccl22","H2-Aa","Naaa","Gm2a","H2-Ab1","Ppt1","Cytip")
+
+#MCA T_cell
+#T1 <- c("Gzma","Gzmb","Ccl5","Xcl1","Cd7","Gzmc","Il2rb","Nkg7","Klrb1b","Cd3g")
+#T2 <- c("Trbc2","Trac","Icos","Satb1","Isy1","Ms4a4b","Cd3d","Trbc1","Sh2d2a","Cd28")
+
+#MCA B_cell
+#B1 <- c("Bank1", "Bcl11a", "Cd19", "Cd22", "Cd37", "Cd74", "Cd79a", "Cd79b", "Cxcr4", "Ebf1", "Fcer2a", "Fcmr", "Fcrla")
+#PB <- c("Creld2", "Crip1", "Derl3", "Dnajc3", "Eaf2", "Edem1", "Edem2", "Fam46c", "Glipr1", "Gm43291", "H13", "Herpud1", "Hsp90b1", "Igha", "Igkc", "Iglc2", "Jchain")
+
+#MCA Hepatocyte
+#Hepa <- c("Alb","Apoa1","Fgb","Gc","Ahsg","Kng1","Mup3","Car3","Gsta3","Hpd","Ass1","Mat1a","Bhmt","Fabp1","Aldob","Wfdc21")
+
+#Cholangiocyte
+#chol <- c("Alcam", "Ambp", "Ankrd1", "Anxa5", "Atp1b1", "Bicc1", "Ces1d", "Cldn3", "Cldn7", "Clu", "Cp", "Cyr61", "Cystm1", "Dbi", "Ddit4l", "Dsg2")
+
+#HSC
+#hscc <- c("Angptl6", "Bgn", "C3", "C4b", "Col14a1", "Col1a1", "Col1a2", "Col3a1", "Colec11", "Cxcl12", "Cygb", "Dcn", "Dpt", "Ecm1", "Efemp1", "Gsn", "Ifitm1", "Igfbp5", "Igfbp6")
+
+#合并
+#markers <- c(KC,PB,T1,T2,DC,np,B1,chol,Macro,hscc,Hepa)
+```
+
+```{r}
+#basal
+Basal<-c("KRT14","KRT17","DST","KRT5","SAA1","ACTA2","SFN")
+#lumHR
+LumHR<-c("AREG","MUCL1","AZGP1","PIP","KRT18","AGR2","ANKRD30A")
+#lumSec
+LumSec<-c("SCGB2A2","SLP1","WFDC2","LTF","KRT15","MMP7","SCGB3A1")
+#Fibro
+Fibro<-c("DCN","APOD","CFD","TNFAIP66","LUM","COL1A2","COL1A1")
+#Lymphatic
+Lymphatic<-c("CCL21","TFF3","MMRN1","CAVIN2","CLDN5","LYVE1","TFPI")
+#Vascular
+Vascular<-c("SELE","ACKR1","FABP4","STC1","ANGPT2","CSF3")
+#Perivasc
+Perivasc<-c("RGS5","C11orf96","IGFBP5","STEAP4","MYL9","IGFBP7","ADIRF")
+#Myeloid
+Myeloid<-c("HLA-DRA","IL1B","HLA-DPA1","HLA-DPB1","HLA-DRB1","CD74","CCL3")
+#T cells
+Tcells<-c("IL7R","CCL5","PTPRC","CXCR4","GNLY","CD2","SRGN")
+#B cells
+Bcells<-c("IGKC","IGLC2","IGHA1","IGLC3","JCHAIN","IGHA2","IGHG1")
+#合并
+markers <- c(Basal,LumHR,LumSec,Fibro,Lymphatic,Vascular,Perivasc,Myeloid,Tcells,Bcells)
+```
+
+
+
+
+
+
+```{r}
+#epithelial cells
+Epithelial_cells<-c("EPCAM")
+#proliferating cells
+Proliferating_cells<-c("MKI67")
+#T cells
+T_cells<-c("CD3D")
+#myeloid cells
+Myeloid_cells<-c("CD68")
+#B cells
+B_cells<-c("MS4A1")
+#plasmablasts
+Plasmablasts<-c("JCHAIN")
+#endothelial cells
+Endothelial_cells<-c("PECAM1")
+#mesenchymal cells (fibroblasts/perivascular-like cells)
+Mesenchymal_cells<-c("PDGFRB")
+
+#合并
+markers <- c(Epithelial_cells,Proliferating_cells,T_cells,Myeloid_cells,B_cells,Plasmablasts,Endothelial_cells,Mesenchymal_cells)
+```
+
+```{r}
+#点图
+DotPlot(compare, features = unique(markers),group.by ="seurat_clusters")+RotatedAxis()+scale_x_discrete("")+scale_y_discrete("")
+
+celltype<-DotPlot(compare, features = unique(markers),group.by ="seurat_clusters")+RotatedAxis()+scale_x_discrete("")+scale_y_discrete("")
+ggsave("celltype_marker_dot1.png",celltype,width = 20,height = 20)
+```
+
+```{r}
+new.cluster.ids <- c("T cells",
+                     "Epithelial cells",
+                     "T cells",
+                     "Endothelial cells",
+                     "Epithelial cells",
+                     "B cells")
+compare@meta.data$celltype<- compare@meta.data$seurat_clusters
+levels(compare@meta.data$celltype) <- new.cluster.ids#将celltype确定
+```
+
+
+
+
+```{r}
+new.cluster.ids <- c("T cells",
+                     "T cells",
+                     "T cells",
+                     "Epithelial cells",
+                     "T cells",
+                     "Endothelial cells",
+                     "T cells",
+                     "T cells",
+                     "Mesenchymal cells",
+                     "T cells",
+                     "Epithelial cells",
+                     "Mesenchymal cells",
+                     "Endothelial cells",
+                     "Epithelial cells",
+                     "Mesenchymal cells",
+                     "B cells",
+                     "Myeloid cells",
+                     "Epithelial cells",
+                     "Epithelial cells",
+                     "Epithelial cells",
+                     "Myeloid cells",
+                     "Epithelial cells",
+                     "Myeloid cells",
+                     "Mesenchymal cells",
+                     "Plasmablasts",
+                     "Myeloid cells",
+                     "Proliferating cells",
+                     "Epithelial cells",
+                     "Epithelial cells",
+                     "Proliferating cells",
+                     "Epithelial cells",
+                     "Epithelial cells",
+                     "Epithelial cells",
+                     "Plasmablasts",
+                     "Myeloid cells",
+                     "Epithelial cells",
+                     "Plasmablasts",
+                     "Epithelial cells",
+                     "Epithelial cells",
+                     "Myeloid_cells",
+                     "B cells",
+                     "Epithelial cells",
+                     "Mesenchymal cells",
+                     "Endothelial cells",
+                     "Myeloid cells",
+                     "Epithelial cells",
+                     "Proliferating cells",
+                     "Plasmablasts",
+                     "Epithelial cells",
+                     "Mesenchymal cells",
+                     "Epithelial cells",
+                     "T cells",
+                     "Endothelial cells",
+                     "Epithelial cells",
+                     "Mesenchymal cells",
+                     "T cells",
+                     "Endothelial cells")
+compare@meta.data$celltype<- compare@meta.data$seurat_clusters
+levels(compare@meta.data$celltype) <- new.cluster.ids#将celltype确定
+
+```
+
+```{r}
+#点图
+DotPlot(compare, features = unique(markers),group.by = "celltype")+RotatedAxis()+scale_x_discrete("")+scale_y_discrete("")
+celltype<-DotPlot(compare, features = unique(markers),group.by = "celltype")+RotatedAxis()+scale_x_discrete("")+scale_y_discrete("")
+ggsave("celltype_marker_dot2.png",celltype,width = 9.5,height = 6)
+```
+
+```{r}
+#特异性高表达基因，与markers不同
+#marker<-c("Clec4g","Nrp1","Ccl5","Nkg7","S100a4","Lyz2","Cd79a", "Cd79b","Cd5l","C1qa","Cst3","Gm2a","Alcam", "Ambp","Mup3","Car3","Glipr1", "Fam46c","Col14a1", "Col1a1")
+#UMAP<-DimPlot(compare,reduction = "umap",group.by="celltype",label=T)
+#ggsave("celltype_marker.pdf",UMAP,width = 9.5,height = 6)
+```
