@@ -136,29 +136,58 @@ VariableFeaturePlot(compare)
 # 所有基因 处理 平均值为0 标准差为1  高表达基因和低表达同等对待  标准化
 # scaladata cell cycle 如果有差异，就只能挑选你想要的
 #compare <- ScaleData(compare,verbose = F, vars.to.regress = c("nFeature_RNA", "percent.mt"))
-DefaultAssay(compare) <- "integrated"
+#DefaultAssay(compare) <- "integrated"
 compare <- ScaleData(compare,verbose = F)
 compare <- RunPCA(compare,npcs =20, verbose = FALSE)
 # UMAP TSNE 20维度再将维度2维度 UMAP细胞多，快 全局精准  PC1 PC2
-compare <- RunUMAP(compare, reduction = "pca", dims = 1:20,verbose = FALSE, seed.use = 42)
+compare <- RunUMAP(compare, reduction = "pca", dims = 1:20,verbose = FALSE)
 #pc值20一般，样本数多就大，样本数少就小，看曲线
 #DimHeatmap(compare, dims = 1:20, cells = 100, balanced = TRUE)
 ElbowPlot(compare)
 ```
 
 ```{r}
-#kmean =2 两个聚类
-#监督（公共数据），无监督（自身）
+#kmean =2 两个聚类 监督（公共数据），无监督（自身）
 compare <- FindNeighbors(compare, dims = 1:20,verbose = FALSE)
-compare <- FindClusters(compare, resolution = 0.8, verbose = FALSE)
+compare <- FindClusters(compare, resolution = 1.0, verbose = FALSE)
 #table(compare@meta.data$RNA_snn_res.1.0)
-#UMAP
 compare <- RunUMAP(compare, dims = 1:20, do.fast = TRUE)
-DimPlot(compare,reduction = "umap",label=T)
+DimPlot(compare,reduction = "umap",label=T,raster=FALSE)
 #table(compare@meta.data$seurat_clusters,compare@meta.data$orig.ident)
 #saveRDS(compare, file="compare.Rds")
 #data <- readRDS("compare.rds")
 ```
+
+```{r}
+FeaturePlot(compare, features = c("KRT14"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("KRT17"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("DST"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("KRT5"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("SAA1"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("ACTA2"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("SFN"),cols = c("grey", "red"))
+```
+
+
+```{r}
+FeaturePlot(compare, features = c("EPCAM"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("ESR1"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("ACTA2"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("CD3D"),cols = c("grey", "red"))
+```
+
+```{r}
+FeaturePlot(compare, features = c("IL7R"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("CCL5"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("CXCR4"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("PTPRC"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("SRGN"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("CD3D"),cols = c("grey", "red"))
+FeaturePlot(compare, features = c("GNLY"),cols = c("grey", "red"))
+```
+
+
+
 
 ```{r}
 # TSNE
