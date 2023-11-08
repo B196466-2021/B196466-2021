@@ -1,0 +1,632 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-08-09"
+---
+
+```{r}
+#加载包
+library(Seurat)
+library(Matrix)
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+library(scater)
+library(scDblFinder)
+library(BiocManager)
+library(cowplot)
+library(msigdbr)
+library(org.Hs.eg.db)
+library(stringr)
+library(DOSE)
+library(rlang)
+```
+
+
+
+
+
+
+
+
+```{r}
+#读取数据（多个样本示例）$type给每个样本一个标签
+data1 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE163974_RAW/GSM4994386")
+GSM4994386 <- CreateSeuratObject(counts = data1, project = "GSM4994386")
+GSM4994386$type <- "GSM4994386"
+
+data2 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE201348_RAW/GSM6061645_A001_C_007")
+GSM6061645 <- CreateSeuratObject(counts = data2, project = "GSM6061645")
+GSM6061645$type <- "GSM6061645"
+
+data3 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE201348_RAW/GSM6061702_CRC1_8810")
+GSM6061702 <- CreateSeuratObject(counts = data3, project = "GSM6061702")
+GSM6061702$type <- "GSM6061702"
+
+data4 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE201348_RAW/GSM6061703_CRC2_15564")
+GSM6061703 <- CreateSeuratObject(counts = data4, project = "GSM6061703")
+GSM6061703$type <- "GSM6061703"
+
+data5 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE201348_RAW/GSM6061704_CRC3_11773")
+GSM6061704 <- CreateSeuratObject(counts = data5, project = "GSM6061704")
+GSM6061704$type <- "GSM6061704"
+
+data6 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE205506_RAW/GSM6213970")
+GSM6213970 <- CreateSeuratObject(counts = data6, project = "GSM6213970")
+GSM6213970$type <- "GSM6213970"
+
+data7 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE205506_RAW/GSM6213971")
+GSM6213971 <- CreateSeuratObject(counts = data7, project = "GSM6213971")
+GSM6213971$type <- "GSM6213971"
+
+data8 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE205506_RAW/GSM6213973")
+GSM6213973 <- CreateSeuratObject(counts = data8, project = "GSM6213973")
+GSM6213973$type <- "GSM6213973"
+
+data9 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE205506_RAW/GSM6213976")
+GSM6213976<- CreateSeuratObject(counts = data9, project = "GSM6213976")
+GSM6213976$type <- "GSM6213976"
+
+data10 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE205506_RAW/GSM6213980")
+GSM6213980 <- CreateSeuratObject(counts = data10, project = "GSM6213980")
+GSM6213980$type <- "GSM6213980"
+
+data11 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE205506_RAW/GSM6213983")
+GSM6213983 <- CreateSeuratObject(counts = data11, project = "GSM6213983")
+GSM6213983$type <- "GSM6213983"
+
+data12 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE205506_RAW/GSM6213988")
+GSM6213988 <- CreateSeuratObject(counts = data12, project = "GSM6213988")
+GSM6213988$type <- "GSM6213988"
+
+data13 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE205506_RAW/GSM6213991")
+GSM6213991 <- CreateSeuratObject(counts = data13, project = "GSM6213991")
+GSM6213991$type <- "GSM6213991"
+
+data14 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE205506_RAW/GSM6213994")
+GSM6213994 <- CreateSeuratObject(counts = data14, project = "GSM6213994")
+GSM6213994$type <- "GSM6213994"
+
+data15 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE205506_RAW/GSM6213995")
+GSM6213995 <- CreateSeuratObject(counts = data15, project = "GSM6213995")
+GSM6213995$type <- "GSM6213995"
+
+data16 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE225857_RAW/GSM7058756")
+GSM7058756 <- CreateSeuratObject(counts = data16, project = "GSM7058756")
+GSM7058756$type <- "GSM7058756"
+
+data17 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE225857_RAW/GSM7058757")
+GSM7058757<- CreateSeuratObject(counts = data17, project = "GSM7058757")
+GSM7058757$type <- "GSM7058757"
+
+data18 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE225857_RAW/GSM7058758")
+GSM7058758<- CreateSeuratObject(counts = data18, project = "GSM7058758")
+GSM7058758$type <- "GSM7058758"
+
+data19 <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/GSE225857_RAW/GSM7058759")
+GSM7058759<- CreateSeuratObject(counts = data19, project = "GSM7058759")
+GSM7058759$type <- "GSM7058759"
+```
+
+```{r}
+#整合数据
+# create a list to include all these four Seurat obj
+seu.list <- list(GSM6213970,GSM6213971,GSM6213973,GSM6213976,GSM6213980,GSM6213983,GSM6213988,GSM6213991,GSM6213994,GSM6213995)
+
+# normalize data and find feature genes
+seu.list <- lapply(X = seu.list, FUN = function(x) {
+  x <- NormalizeData(x) 
+  x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
+})
+# select features that are repeatedly variable across datasets for integration
+features <- SelectIntegrationFeatures(object.list = seu.list)
+
+# find anchors in CCA-reduced space (CCA - canonical correlation analysis)
+data.anchors <- FindIntegrationAnchors(object.list = seu.list, 
+                                       anchor.features = features,
+                                       reduction = "cca", 
+                                       verbose=FALSE)
+
+# integrate data using the identified anchors
+compare <- IntegrateData(anchorset = data.anchors, verbose=FALSE)
+```
+
+
+
+
+
+
+
+
+```{r}
+#读取数据（单一样本示例无需整合）$type给每个样本一个标签
+#data <- Read10X(data.dir ="/home/spdx/yutc/Colorectal_cancer/Human Colon Cancer Atlas (c295)")
+#compare<- CreateSeuratObject(counts = data, project = "CRC")
+#compare$type <- "CRC"
+```
+
+
+
+
+
+
+
+
+```{r}
+#质量控制
+
+#标记线粒体和核糖体
+compare[["percent.mt"]] <- PercentageFeatureSet(compare, pattern = "^MT")
+compare[["percent.rb"]] <- PercentageFeatureSet(compare, pattern = "^RP[SL]")
+
+#Plot QC
+VlnPlot(compare, features = c("nFeature_RNA","nCount_RNA","percent.mt","percent.rb"),group.by = "orig.ident",ncol = 4,pt.size = 0.1) 
+
+# consider cells with at least 200 detected genes and genes need to be expressed in at least 3 cells
+selected_c <- WhichCells(compare, expression =  nFeature_RNA >10)
+selected_f <- rownames(compare)[Matrix::rowSums(compare) > 3]
+compare <- subset(compare, features = selected_f, cells = selected_c)
+compare <- subset(compare, subset = nCount_RNA > 200 & percent.mt < 20)
+
+# Plot filtered QC
+VlnPlot(compare, features = c("nFeature_RNA","nCount_RNA","percent.mt","percent.rb"),group.by = "orig.ident",ncol = 4,pt.size = 0.1) 
+```
+
+```{r}
+#Seurat处理
+
+#标准化数据
+compare <- NormalizeData(compare)
+
+#寻找2000个高度可变基因
+compare <- FindVariableFeatures(compare, verbose = F,selection.method = "vst", nfeatures = 2000)
+VariableFeaturePlot(compare)
+
+#归一化数据
+compare <- ScaleData(compare)
+
+#主成分分析
+compare <- RunPCA(compare,npcs =20, verbose = FALSE)
+
+#UMAP可视化
+compare <- RunUMAP(compare, reduction = "pca", dims = 1:20,verbose = FALSE)
+
+#ElbowPlot确定维度
+ElbowPlot(compare)
+
+#降维聚类
+compare <- FindNeighbors(compare, dims = 1:20,verbose = FALSE)
+compare <- FindClusters(compare, resolution = 1.0, verbose = FALSE)
+
+
+#UMAP可视化
+compare <- RunUMAP(compare, dims = 1:20, do.fast = TRUE)
+DimPlot(compare,reduction = "umap",label=T,raster=FALSE)
+```
+
+
+
+
+
+
+
+
+```{r}
+#细胞注释
+#epithelial cells
+Epithelial_cells<-c("EPCAM")
+#proliferating cells
+Proliferating_cells<-c("MKI67")
+#T cells
+T_cells<-c("CD3D")
+#myeloid cells
+Myeloid_cells<-c("CD68")
+#B cells
+B_cells<-c("MS4A1")
+#plasmablasts
+Plasmablasts<-c("JCHAIN")
+#endothelial cells
+Endothelial_cells<-c("PECAM1")
+#mesenchymal cells (fibroblasts/perivascular-like cells)
+Mesenchymal_cells<-c("PDGFRB")
+#合并
+markers <- c(Epithelial_cells,Proliferating_cells,T_cells,Myeloid_cells,B_cells,Plasmablasts,Endothelial_cells,Mesenchymal_cells)
+#点图
+celltype<-DotPlot(compare, features = unique(markers),group.by ="seurat_clusters")+RotatedAxis()+scale_x_discrete("")+scale_y_discrete("")
+ggsave("celltype_marker_dot.png",celltype,width = 20,height = 20)
+```
+
+
+
+
+
+
+
+
+
+```{r}
+#infercnv 数据准备
+#细胞表达矩阵
+dat <- GetAssayData(compare,assay = "RNA",slot = "counts")
+
+
+#这个是inferCNV自带参比数据集  用来做infer
+expFile=system.file("extdata", "oligodendroglioma_expression_downsampled.counts.matrix.gz", package = "infercnv")  
+geneFile=system.file("extdata", "oligodendroglioma_annotations_downsampled.txt", package = "infercnv")   
+groupFiles=system.file("extdata", "gencode_downsampled.EXAMPLE_ONLY_DONT_REUSE.txt", package = "infercnv")    
+
+library(AnnoProbe)    #用jimmy老师的包 我们用这个包做一个基因与其染色体位置
+geneInfor=annoGene(rownames(dat),"SYMBOL",'human')    #可能有一些gene 无法anno
+colnames(geneInfor)
+geneInfor=geneInfor[with(geneInfor, order(chr, start)),c(1,4:6)]      
+geneInfor=geneInfor[!duplicated(geneInfor[,1]),]
+length(unique(geneInfor[,1]))
+head(geneInfor)
+
+dat=dat[rownames(dat) %in% geneInfor[,1],]
+dat=dat[match(geneInfor[,1], rownames(dat)),]   
+#将表达矩阵的基因排列顺序与geneInfor的基因排列顺序弄成一致
+rownames(geneInfor) <- geneInfor$SYMBOL   
+#这样我们就制作好了染色体位置信息和排列顺序好的count表达矩阵
+geneInfor <- geneInfor[,-1]    
+
+#制作mate信息
+#假如你后面是想分析每一个群的CNV的话  这里要改成seruat_cluster
+meta <- subset(compare@meta.data,select = c("seurat_clusters"))   
+names(meta)[names(meta) == 'seurat_clusters'] <- 'seurat_clusters'
+
+#验证1   表达矩阵的列名要与meta的行名一致
+identical(colnames(dat),rownames(meta))  
+#验证2   表达矩阵的行名要与geneInfor的行名一致
+identical(rownames(dat),rownames(geneInfor))
+#三个输入数据准备好了   dat-表达矩阵  meta-分组信息  geneInfor-基因染色体信息
+```
+
+```{r}
+#只需要更改ref_group_names处将其改成celltype_marker_dot.png中判定为T细胞和内皮细胞的cluster
+library(tidyverse)
+library(ggplot2)
+library(infercnv)
+library(ComplexHeatmap)
+library(ggpubr)
+#二步法构建对象
+infercnv_obj = CreateInfercnvObject(raw_counts_matrix=dat,
+                                    annotations_file=meta,
+                                    delim="\t",
+                                    gene_order_file=geneInfor,
+                                    min_max_counts_per_cell = c(100, +Inf),
+                                    ref_group_names=c("1","7","9"))#选基础的细胞  或者样本 看meta的输入类型也可以不选择 算法根据平均值来自己算
+infercnv_obj = infercnv::run(infercnv_obj,
+                             cutoff=0.1, # cutoff=1 works well for Smart-seq2, and cutoff=0.1 works well for 10x Genomics
+                             out_dir="cnv1/", 
+                             cluster_by_groups=T,
+                             write_expr_matrix=T,# 选择TRUE是按样本分组 改为FALSE会进行按另一个参数k_obs_groups给出的分组数（默认为1）进行分组
+                             denoise=T,     #是否去噪
+                             HMM=F)   # 是否基于HMM预测CNV,True的话时间很久
+#结果输出在当前工作路径下的out_dir文件夹下（最终会输出很多文件在out_dir的目录下）   可以直接用里面的热图
+#也就可以对热图进行改造  换颜色（用inferCNV的官方的画图函数）
+#infercnv::plot_cnv(infercnv_obj, #上两步得到的infercnv对象
+                   #plot_chr_scale = T, #画染色体全长，默认只画出（分析用到的）基因
+                   #output_filename = "better_plot",output_format = "pdf", #保存为pdf文件
+                   #custom_color_pal =  color.palette(c("#8DD3C7","white","#BC80BD"), c(2, 2))) #改颜色
+```
+
+
+
+
+
+
+
+
+
+```{r}
+#根据CNV结果，分离肿瘤细胞
+Idents(compare)<-compare$seurat_clusters
+Epithelial_cells<- subset(compare, idents=c("8","11","12","13","14","16","18","22","23","25","26","27","29","30","32","33","35","38","39","41","44","45","49","51","54","55","56","57","59"))
+```
+
+
+```{r}
+#获得平均表达谱
+sample.averages<-AverageExpression(Epithelial_cells,group.by = "orig.ident")
+dense_matrix<-as.matrix(sample.averages$RNA)
+m_df<- as(dense_matrix, "dgCMatrix")
+
+library(org.Hs.eg.db)
+rownames(m_df)=toupper(rownames(m_df))
+ddata=t(m_df)
+s=colnames(ddata);head(s);tail(s)
+
+ls("package:org.Hs.eg.db")
+class(org.Hs.egSYMBOL)
+s2g=toTable(org.Hs.egSYMBOL)
+g=s2g[match(s,s2g$symbol),1]
+
+dannot=data.frame(probe=s,"Gene.Symbol" =s, "EntrezGene.ID"=g)
+# 下面去掉ddata和dannot中NA的行
+ddata=ddata[,!is.na(dannot$EntrezGene.ID)] 
+#ID转换
+dannot=dannot[!is.na(dannot$EntrezGene.ID),]
+matrix <- as.matrix(ddata)
+```
+
+
+
+
+
+
+
+
+
+```{r}
+#（可选做）导入TCGA结直肠癌数据，并规范化
+table2<-read.table("/home/spdx/yutc/TCGA-CRC-counts.csv",header=TRUE,sep=",")
+index<-duplicated (table2$X)
+table3<-table2[!index,] 
+rownames(table3)<-table3[,1]
+table3<- subset(table3, select = -c(X))
+library(limma)
+table<-normalizeBetweenArrays(table3)
+tpm = t(t(table3)/colSums(table3)) * 10^6
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+#CMScaller 可以对TCGA数据进行分子分型判定，也可以对平均表达谱进行分子分型判定
+library(CMScaller)
+matrix<-t(matrix)
+cmscaller<-CMScaller(
+    matrix,
+    templates = CMScaller::templates.CMS,
+    rowNames = "symbol",
+    RNAseq = FALSE,
+    nPerm = 1000,
+    seed = NULL,
+    FDR = 0.05,
+    doPlot = TRUE,
+    verbose = TRUE
+)
+write.table(cmscaller,file="/home/spdx/yutc/cmscaller.csv",sep=",")
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+#导入CRC centroid
+#基因名
+table<-read.table("/home/spdx/yutc/CRC_gene/18gene.csv",header=TRUE,sep=',')
+CRC_67gene<-table[,1]
+select_matrix <- matrix[rownames(matrix) %in% table[,1],]
+select_matrix<-as.data.frame(select_matrix)
+#centroid
+centroids<-read.table("/home/spdx/yutc/CRC_gene/18genesPCR_Colorect4set_centroids.txt",header=TRUE,sep='\t')
+rownames(centroids)<-centroids[,1]
+centroids<- subset(centroids, select = -c(X))#删除第一列
+
+#整合
+library(corrplot)
+data_merge<- merge(centroids,select_matrix,by = 'row.names', all = FALSE)
+rownames(data_merge)<-data_merge[,1] #将数据框的第一列作为行名
+data_merge<- subset(data_merge, select = -c(Row.names))#删除第一列
+#计算特征两两之间的相关系数
+M <- cor(data_merge,method = "spearman")
+#计算特征两两之间的相关性检验的P值
+Pval <- cor.mtest(data_merge)
+
+#截取相关性分析所需部分
+N<-M[-c(1:5),1:5]
+subtype <- apply(N[,1:5], 1, function(x) colnames(N)[which.max(x)])
+N<-cbind(N, subtype)
+N<-as.data.frame(N)
+
+#出图
+file_path= "/home/spdx/Correlation matrix.png"
+png(height=500, width=500, file=file_path, type = "cairo")
+corrplot(M, method = "circle")
+dev.off ()
+
+#出表格
+write.table(Pval$p,file="P_value.csv",quote=FALSE,sep=",")
+write.table(select_matrix,file="matrix.csv",sep=",")
+write.table(N,file="subtype.csv",sep=",")
+```
+
+
+
+
+
+
+
+
+
+```{r}
+#分离CMS4亚型结果
+Idents(Epithelial_cells)<-Epithelial_cells$orig.ident
+Epithelial_cells$label<-as.character(Epithelial_cells$orig.ident)
+
+
+Epithelial_cells$label<-ifelse(Epithelial_cells$label %in% c("C110","C114","C118","C123","C130","C144","C146","C147","C156","C167","C168","C170"),"CMS1",Epithelial_cells$label)
+Idents(Epithelial_cells)<-Epithelial_cells$label
+CMS1<- subset(Epithelial_cells, idents=c("CMS1"))
+
+Epithelial_cells$label<-ifelse(Epithelial_cells$label %in% c("C103","C105","C109","C112","C125","C134","C135","C136","C139","C140","C149","C150","C153","C161","C171"),"CMS2",Epithelial_cells$label)
+Idents(Epithelial_cells)<-Epithelial_cells$label
+CMS2<- subset(Epithelial_cells, idents=c("CMS2"))
+
+Epithelial_cells$label<-ifelse(Epithelial_cells$label %in% c("C104","C106","C111","C113","C115","C116","C122","C124","C126","C133","C138","C143","C151","C152","C154","C155","C157","C165"),"CMS3",Epithelial_cells$label)
+Idents(Epithelial_cells)<-Epithelial_cells$label
+CMS3<- subset(Epithelial_cells, idents=c("CMS3"))
+
+Epithelial_cells$label<-ifelse(Epithelial_cells$label %in% c("C129","C145","C159","C160","C166","C169"),"CMS4",Epithelial_cells$label)
+Idents(Epithelial_cells)<-Epithelial_cells$label
+CMS4<- subset(Epithelial_cells, idents=c("CMS4"))
+
+```
+
+```{r}
+#差异表达分析
+Idents(Epithelial_cells)<-Epithelial_cells$label
+CMS<- subset(Epithelial_cells, idents=c("CMS1","CMS2","CMS3","CMS4"))
+all.markers <- FindAllMarkers(object = CMS)
+```
+
+```{r}
+# find the top 20 genes
+all.markers %>%
+    group_by(cluster) %>%
+    top_n(n = 20, wt = avg_log2FC) -> top20
+# make heatmap
+DefaultAssay(CMS) <- "RNA"
+Heatmap<-DoHeatmap(CMS, features = top20$gene) 
+ggsave("Heatmap.png",Heatmap,height=10)
+# create table
+top20
+write.csv(top20,file="top20.csv")
+```
+
+
+
+
+
+
+
+
+```{r}
+#根据单细胞衍生分子亚型 判定单细胞分子分型
+#导入单细胞衍生分子亚型
+sigdat <- read.csv("/home/spdx/CRC_gene/sc_CRC.csv")
+temp_allgenes <- c(as.vector(sigdat[,"CMS1"]),
+                   as.vector(sigdat[,"CMS2"]),
+                   as.vector(sigdat[,"CMS3"]),
+                   as.vector(sigdat[,"CMS4"]))
+temp_allgenes <- unique(temp_allgenes[!temp_allgenes == ""])
+```
+
+```{r}
+#获得肿瘤细胞表达谱
+DefaultAssay(Epithelial_cells)<-"RNA"
+Epithelial_cells <- ScaleData(Epithelial_cells, features=temp_allgenes)
+tocalc<-as.data.frame(Epithelial_cells@assays$RNA@scale.data)
+
+outdat <- matrix(0,
+                 nrow=ncol(sigdat),
+                 ncol=ncol(tocalc),
+                 dimnames=list(colnames(sigdat),
+                               colnames(tocalc)))
+for(i in 1:ncol(sigdat)){
+  
+  # sigdat[i,!is.na(sigdat[i,])]->module
+  # row <- as.character(unlist(module))
+  row <- as.character(sigdat[,i])
+  row<-unique(row[row != ""])
+  genes<-which(rownames(tocalc) %in% row)
+  
+  temp<-apply(tocalc[genes,],2,function(x){mean(as.numeric(x),na.rm=TRUE)})
+  
+  outdat[i,]<-as.numeric(temp)
+
+}
+
+final<-outdat[which(rowSums(outdat,na.rm=TRUE)!=0),]
+final<-as.data.frame(final)
+is.num <- sapply(final, is.numeric);final[is.num] <- lapply(final[is.num], round, 4)
+finalm<-as.matrix(final)
+
+##Scaling scores function before calling the highest Call
+center_sweep <- function(x, row.w = rep(1, nrow(x))/nrow(x)) {
+  get_average <- function(v) sum(v * row.w)/sum(row.w)
+  average <- apply(x, 2, get_average)
+  sweep(x, 2, average)
+}
+
+##Obtaining the highest call
+finalmt<-as.data.frame(t(finalm))
+finalm.sweep.t<-center_sweep(finalmt)
+Finalnames<-colnames(finalm.sweep.t)[max.col(finalm.sweep.t,ties.method="first")]
+finalm.sweep.t$SCSubtypeCall <- Finalnames
+
+##Writing out output files (rownames remain the same for both) 结果文件
+write.table(finalm.sweep.t, "/home/spdx/Mydata_Scores.txt", sep="\t")
+write.table(Finalnames, "/home/spdx/Mydata_CALLS.txt", sep="\t")
+```
+
+```{r}
+type<-as.data.frame(Epithelial_cells$orig.ident)
+finalm.sweep.t$sample<-type$`Epithelial_cells$orig.ident`
+write.table(finalm.sweep.t, "/home/spdx/Mydata_Scores.txt", sep="\t")
+# 按 Group 分组，并计算每个分组内元素的频数
+grouped_df <- aggregate(SCSubtypeCall ~ sample, data = finalm.sweep.t, function(x) table(factor(x)))
+#write.table(grouped_df, "/home/spdx/scRNA/Code/result/grouped_df.csv", sep=",")
+```
+
+```{r}
+#出图
+library(RColorBrewer) # 调色板
+library(scales)       # 将y轴转化成百分比格式
+library(ggplot2)
+score<-read.table("/home/spdx/Mydata_Scores.txt",header=TRUE,sep='\t')
+png(height=500, width=800)
+ggplot(score, aes(x =sample,fill = SCSubtypeCall)) +
+  geom_bar(width = 0.7, position = "fill") + # 百分比柱状图
+  scale_fill_brewer(palette = "Set1") +     # 调色板{RColorBrewer}
+  scale_y_continuous(labels = percent) +     # 修改y轴刻度为百分比
+  guides(fill=guide_legend(title = "SCsubtype"))+
+   labs(y = "Percentage of SC subtype",x=" ") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+dev.off ()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
